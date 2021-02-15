@@ -1,12 +1,8 @@
-from src import ModelABC
+from dataclasses import dataclass
 
 
-class Evaluation:
-    def __init__(self, model: ModelABC):
-        self.model = model
-
-    def get_mse(self) -> float:
-        pass
+class Evaluation(dataclass):
+    mse: float
 
     def __str__(self):
         pass

@@ -13,6 +13,5 @@ class ModelABC(ABC):
     def predict(self, dataset: TestDataset):
         pass
 
-    @abstractmethod
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
         pass

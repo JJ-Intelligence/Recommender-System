@@ -1,5 +1,5 @@
 from src.data import TestDataset, TrainDataset
-from src import ModelABC, EvaluationDataset
+from src import ModelABC
 
 
 class KNNModel(ModelABC):
@@ -7,7 +7,4 @@ class KNNModel(ModelABC):
         pass
 
     def predict(self, dataset: TestDataset):
-        pass
-
-    def eval(self, evaluation_dataset: EvaluationDataset):
         pass
