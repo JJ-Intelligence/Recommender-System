@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 
-class Evaluation(dataclass):
+@dataclass
+class Evaluation:
     mse: float
 
     def __str__(self):
