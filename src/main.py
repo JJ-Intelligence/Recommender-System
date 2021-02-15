@@ -1,11 +1,10 @@
-import sys
 import argparse
 
 from src.io_handler import read_train_csv, read_test_csv, write_output_csv
 from src.models.knn import KNNModel
 
 
-def main(argv):
+def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--trainfile', type=str,
@@ -30,4 +29,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()

@@ -1,5 +1,5 @@
 from src.data import TestDataset, TrainDataset
-from src import ModelABC, EvaluationDataset
+from src import ModelABC
 
 
 class KNNModel(ModelABC):
