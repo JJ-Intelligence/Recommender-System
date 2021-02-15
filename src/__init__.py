@@ -13,6 +13,12 @@ class ModelABC(ABC):
     def predict(self, dataset: TestDataset):
         pass
 
-    @abstractmethod
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
-        pass
+        predictions = self.predict(evaluation_dataset.to_test_dataset())
+
+
+def get_mse(targets, predictions) -> float:
+    predictions = model.predict(model.)
+
+
+def get_f1() -> float:

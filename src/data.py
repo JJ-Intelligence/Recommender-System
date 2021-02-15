@@ -1,4 +1,12 @@
-import pandas
+import pandas as pd
+import numpy as np
+from typing import Tuple
+
+
+class TestDataset:
+    """Data from the test file, which we want to generate predictions of"""
+    def __init__(self, dataset: pd.DataFrame):
+        self.dataset = dataset
 
 
 class TrainDataset:
@@ -6,15 +14,10 @@ class TrainDataset:
     Data from the train file, which we want to learn from
     Split into train/evaluation datasets
     """
-    def __init__(self, dataset: pandas.DataFrame):
+    def __init__(self, dataset: pd.DataFrame):
         self.dataset = dataset
 
 
 class EvaluationDataset(TrainDataset):
-    pass
-
-
-class TestDataset:
-    """Data from the test file, which we want to generate predictions of"""
-    def __init__(self, dataset: pandas.DataFrame):
-        self.dataset = dataset
+    def to_test_dataset(self) -> Tuple[TestDataset, np.ndarray]:
+        return TestDataset(self.X), self.y

@@ -8,6 +8,3 @@ class KNNModel(ModelABC):
 
     def predict(self, dataset: TestDataset):
         pass
-
-    def eval(self, evaluation_dataset: EvaluationDataset):
-        pass
