@@ -1,12 +1,9 @@
+from dataclasses import dataclass
 
 
-
+@dataclass
 class Evaluation:
-    def __init__(self, model: ModelABC):
-        self.model = model
+    mse: float
 
     def __str__(self):
-        pass
-
-
-
+        return "\n".join(f"{k}:{v}" for k, v in self.__dict__.items())

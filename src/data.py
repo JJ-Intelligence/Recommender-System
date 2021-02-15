@@ -1,5 +1,5 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from typing import Tuple
 
 
@@ -10,14 +10,13 @@ class TestDataset:
 
 
 class TrainDataset:
-    """
-    Data from the train file, which we want to learn from
-    Split into train/evaluation datasets
-    """
-    def __init__(self, dataset: pd.DataFrame):
-        self.dataset = dataset
+    """Data from the train file, which we want to learn from"""
+    def __init__(self, X: pd.DataFrame, y: pd.Series):
+        self.X = X
+        self.y = y
 
 
 class EvaluationDataset(TrainDataset):
+    """Data from the train file, which will be used to evaluate the performance of a model"""
     def to_test_dataset(self) -> Tuple[TestDataset, np.ndarray]:
-        return TestDataset(self.X), self.y
+        return TestDataset(self.X), self.y.to_numpy()
