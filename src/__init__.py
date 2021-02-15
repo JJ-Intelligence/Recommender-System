@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import numpy as np
+import sklearn.metrics as metrics
 
 from src.data import TrainDataset, TestDataset, EvaluationDataset
 from src.evaluation import Evaluation
@@ -10,8 +12,13 @@ class ModelABC(ABC):
         pass
 
     @abstractmethod
-    def predict(self, dataset: TestDataset):
+    def predict(self, dataset: TestDataset) -> np.ndarray:
         pass
 
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
-        pass
+        test_dataset, y_true = evaluation_dataset.to_test_dataset()
+        y_preds = self.predict(test_dataset)
+
+        return Evaluation(
+            mse=metrics.mean_squared_error(y_true, y_preds),
+        )

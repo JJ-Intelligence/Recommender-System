@@ -6,4 +6,4 @@ class Evaluation:
     mse: float
 
     def __str__(self):
-        pass
+        return "\n".join(f"{k}:{v}" for k, v in self.__dict__.items())
