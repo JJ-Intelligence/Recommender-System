@@ -1,4 +1,3 @@
-import sys
 import argparse
 
 from src.io_handler import read_train_csv, read_test_csv, write_output_csv
