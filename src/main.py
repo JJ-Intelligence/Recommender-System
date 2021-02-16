@@ -15,14 +15,17 @@ def main():
                         help='File to output predictions')
     args = parser.parse_args()
 
-    train_dataset, evaluation_dataset = read_train_csv(args.trainfile)
+    train_dataset, evaluation_dataset = read_train_csv(args.trainfile, test_size=0.01)
     test_dataset = read_test_csv(args.testfile)
+
+    print(evaluation_dataset)
 
     model = KNNModel()
     model.train(train_dataset)
-    predictions = model.predict(test_dataset)
+    print("Finished training")
+    # predictions = model.predict(test_dataset)
 
-    write_output_csv(args.outputfile, predictions)
+    # write_output_csv(args.outputfile, predictions)
 
     evaluation = model.eval(evaluation_dataset)
     print(evaluation)

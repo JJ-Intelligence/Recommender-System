@@ -1,7 +1,15 @@
 import numpy as np
+from progress.bar import Bar
 
 from src.data import TestDataset, TrainDataset
 from src import ModelABC
+
+
+class SlowBar(Bar):
+    suffix = '%(percent).1f%% - %(remaining_mins)d mins remaining'
+    @property
+    def remaining_mins(self):
+        return self.eta // 60
 
 
 class KNNModel(ModelABC):
@@ -32,8 +40,10 @@ class KNNModel(ModelABC):
         Y = dataset.Y.values
 
         # Get all user ratings
-        for (user_id, item_id, timestamp), rating in zip(X, Y):
-            self._add_user_rating(user_id, item_id, rating)
+        with SlowBar('Processing', max=len(X)) as bar:
+            for (user_id, item_id, timestamp), rating in zip(X, Y):
+                bar.next()
+                self._add_user_rating(user_id, item_id, rating)
         # users := UserID + ProductID -> rating
 
         # for item in
@@ -44,14 +54,17 @@ class KNNModel(ModelABC):
         # for item in items: SUM (SUM(for user in users: similarity(user, this_user)*Y[Item][user].rating) * similarity(item, this_item))
 
     def predict(self, dataset: TestDataset):
-        results = []
-        for (user_a, item_a, timestamp) in dataset.dataset.values:
-            unweighted = 0
-            total_weights = 0
-            for user_b in self.users.keys():
-                if item_a in self.users[user_b]:
-                    sim = self.cosine_similarity(self.users[user_a], self.users[user_b])
-                    unweighted += sim * self.users[user_b][item_a]
-                    total_weights += sim
-            results.append(unweighted/total_weights)
-        return np.array(results)
+
+        with SlowBar('Processing', max=len(dataset.dataset)) as bar:
+            results = []
+            for (user_a, item_a, timestamp) in dataset.dataset.values:
+                bar.next()
+                unweighted = 0
+                total_weights = 0
+                for user_b in self.users.keys():
+                    if item_a in self.users[user_b]:
+                        sim = self.cosine_similarity(self.users[user_a], self.users[user_b])
+                        unweighted += sim * self.users[user_b][item_a]
+                        total_weights += sim
+                results.append(unweighted/total_weights)
+            return np.array(results)

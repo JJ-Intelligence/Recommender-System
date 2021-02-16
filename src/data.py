@@ -11,12 +11,12 @@ class TestDataset:
 
 class TrainDataset:
     """Data from the train file, which we want to learn from"""
-    def __init__(self, X: pd.DataFrame, y: pd.Series):
+    def __init__(self, X: pd.DataFrame, Y: pd.Series):
         self.X = X
-        self.y = y
+        self.Y = Y
 
 
 class EvaluationDataset(TrainDataset):
     """Data from the train file, which will be used to evaluate the performance of a model"""
     def to_test_dataset(self) -> Tuple[TestDataset, np.ndarray]:
-        return TestDataset(self.X), self.y.to_numpy()
+        return TestDataset(self.X), self.Y.to_numpy()
