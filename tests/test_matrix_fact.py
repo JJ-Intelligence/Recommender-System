@@ -1,6 +1,6 @@
 import numpy as np
 
-from models.matrix_fact import lazy_dot
+from models.matrix_fact import lazy_dot, lazy_sub
 
 
 def test_lazy_dot_same_size():
@@ -42,3 +42,15 @@ def test_lazy_dot_even_larger():
     C = lazy_dot(A, B)
     assert next(C)[3] == k
     assert next(C)[4] == k
+
+
+def test_lazy_sub():
+    A = np.array([[1, 2],
+                  [-2, 3]])
+    B = np.array([[3, 4],
+                  [0, 1]])
+    C = np.array(list(lazy_sub(A, B)))
+    assert np.array_equal(np.subtract(A, B), C)
+
+def test_matrix_mapper():
+    pass
