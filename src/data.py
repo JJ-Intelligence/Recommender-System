@@ -14,6 +14,7 @@ class TrainDataset:
     def __init__(self, X: pd.DataFrame, y: pd.Series):
         self.X = X
         self.y = y
+        self.dataset = pd.concat([self.X, self.y], axis=1)
 
 
 class EvaluationDataset(TrainDataset):
