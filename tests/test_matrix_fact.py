@@ -1,6 +1,6 @@
 import numpy as np
 
-from models.matrix_fact import lazy_dot, lazy_sub
+from models.matrix_fact import LazyMatrix, SparseMatrix
 
 
 def test_lazy_dot_same_size():
@@ -8,7 +8,7 @@ def test_lazy_dot_same_size():
                   [-2, 3]])
     B = np.array([[3, 4],
                   [0, 1]])
-    assert np.array_equal(A.dot(B), np.array(list(lazy_dot(A, B))))
+    assert np.array_equal(A.dot(B), LazyMatrix.lazy_dot(A, B)())
 
 
 def test_lazy_dot_different_sizes():
@@ -17,20 +17,19 @@ def test_lazy_dot_different_sizes():
                   [9, -1]])
     B = np.array([[3, 4.3, 7],
                   [0, 1, 1.2]])
-    assert np.array_equal(A.dot(B), np.array(list(lazy_dot(A, B))))
+    assert np.array_equal(A.dot(B), LazyMatrix.lazy_dot(A, B)())
 
 
 def test_lazy_dot_large():
     A = np.ones(100).reshape(-1, 1)
     B = np.ones(100).reshape(-1, 1).T
-    C = lazy_dot(A, B)
-    assert np.array_equal(A.dot(B), np.array(list(C)))
+    assert np.array_equal(A.dot(B), LazyMatrix.lazy_dot(A, B)())
 
 
 def test_lazy_dot_larger():
     A = np.ones(1000000).reshape(-1, 1)
     B = np.ones(1000000).reshape(-1, 1).T
-    C = lazy_dot(A, B)
+    C = LazyMatrix.lazy_dot(A, B)()
     assert next(C)[3] == 1
     assert next(C)[4] == 1
 
@@ -39,18 +38,15 @@ def test_lazy_dot_even_larger():
     k = 200
     A = np.ones(600000).reshape(-1, k)
     B = np.ones(90000).reshape(-1, k).T
-    C = lazy_dot(A, B)
+    C = LazyMatrix.lazy_dot(A, B)()
     assert next(C)[3] == k
     assert next(C)[4] == k
 
 
 def test_lazy_sub():
-    A = np.array([[1, 2],
-                  [-2, 3]])
-    B = np.array([[3, 4],
-                  [0, 1]])
-    C = np.array(list(lazy_sub(A, B)))
-    assert np.array_equal(np.subtract(A, B), C)
+    A = SparseMatrix()
+    B = LazyMatrix((np.array([[3, 4], [0, 1]])), (2, 2))
+    assert np.array_equal(np.subtract(A, B), LazyMatrix.lazy_sub(A, B)())
 
 def test_matrix_mapper():
     pass

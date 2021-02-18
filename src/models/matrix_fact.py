@@ -6,7 +6,8 @@ from src import TrainDataset
 
 
 class CustomMatrix(ABC):
-    pass
+    def __init__(self, shape):
+        self.shape = shape
 
 
 class SparseMatrix(CustomMatrix):
@@ -28,7 +29,7 @@ class SparseMatrix(CustomMatrix):
             else:
                 self.users[user_id][item_id] = rating
 
-        self.shape = (self.get_width(), self.get_height())
+        super().__init__((self.get_width(), self.get_height()))
 
     def get_height(self):
         """The height matters rather than the number of users, since we're not mapping users to indices"""
@@ -46,7 +47,7 @@ class SparseMatrix(CustomMatrix):
     def get_item_vec(self, user_id):
         vec = np.zeros(self.max_item)
 
-        if user_id in self.users: # if the user doesn't exist, return row of 0s
+        if user_id in self.users:  # if the user doesn't exist, return row of 0s
             user_items = self.users.get(user_id)
             for item_id in user_items:
                 vec[item_id] = user_items[item_id]
@@ -55,37 +56,55 @@ class SparseMatrix(CustomMatrix):
 
 
 class LazyMatrix(CustomMatrix):
-    def __init__(self, generator, w, h):
+    def __init__(self, generator, shape):
+        super().__init__(shape)
         self.generator = generator
-        self.shape = (w, h)
+
+    def __call__(self, *args, **kwargs):
+        return np.asarray(list(self.generator))
+
+    def __iter__(self):
+        return self.generator.__iter__()
+
+    def __next__(self):
+        return self.generator.__next__()
 
     @staticmethod
-    def lazy_dot(P, Q):
+    def lazy_dot(P: np.ndarray, Q: np.ndarray):
         """Lazy eval of P.Q"""
-        # return ((sum(i * j for i, j in zip(r, c)) for c in zip(*Q)) for r in P)
-        # TODO add shape check
-        return LazyMatrix((np.asarray([np.dot(r, Q[:, i]) for i in range(Q.shape[-1])]) for r in P),
-                          P.shape[0], Q.shape[-1])
+        matrix = LazyMatrix(
+            (np.asarray([np.dot(r, Q[:, i]) for i in range(Q.shape[-1])]) for r in P),
+            (P.shape[0], Q.shape[-1])
+        )
+        assert matrix.shape == (P.shape[0], Q.shape[-1])
+        return matrix
 
     @staticmethod
     def lazy_sub(R: SparseMatrix, PQ):
-        """
-        Lazy eval of R - PQ
-        :param R: matrix wrapper
-        :param PQ: generator
-        """
+        """Lazy eval of R - PQ"""
         assert R.shape == PQ.shape
-        return LazyMatrix((np.subtract(R.get_item_vec() - row) for y, row in enumerate(PQ)), *PQ.shape)
+        matrix = LazyMatrix((np.subtract(R.get_item_vec(i+1) - row) for i, row in enumerate(PQ)), PQ.shape)
+        assert matrix.shape == PQ.shape
+        return matrix
+
+    @staticmethod
+    def lazy_pow(P, power: int):
+        """ Raises each value in matrix P to the given power"""
+        return LazyMatrix((row**power for row in P.generator), P.shape)
+
+    @staticmethod
+    def lazy_mean(P):
+        return LazyMatrix((np.mean(row) for row in P), (P.shape[0],))
 
 
-class MatrixFactorisor:
+class MatrixFactoriser:
     def __init__(self, R: SparseMatrix):
         """
         P.Q ~= R
         """
 
     @staticmethod
-    def loss(R, P, Q):
-        """"""
-        total = 0
-        # for
+    def loss_mse(R, P, Q):
+        """Returns the MSE loss for matrix factorization, where R ~= P.Q"""
+        val = LazyMatrix.lazy_pow(LazyMatrix.lazy_sub(R, LazyMatrix.lazy_dot(P, Q)), 2)
+        return np.mean(val(), axis=0)
