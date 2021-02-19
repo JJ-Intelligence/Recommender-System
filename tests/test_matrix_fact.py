@@ -29,7 +29,7 @@ def test_lazy_dot_large():
 def test_lazy_dot_larger():
     A = np.ones(1000000).reshape(-1, 1)
     B = np.ones(1000000).reshape(-1, 1).T
-    C = LazyMatrix.lazy_dot(A, B)()
+    C = LazyMatrix.lazy_dot(A, B)
     assert next(C)[3] == 1
     assert next(C)[4] == 1
 
@@ -38,7 +38,7 @@ def test_lazy_dot_even_larger():
     k = 200
     A = np.ones(600000).reshape(-1, k)
     B = np.ones(90000).reshape(-1, k).T
-    C = LazyMatrix.lazy_dot(A, B)()
+    C = LazyMatrix.lazy_dot(A, B)
     assert next(C)[3] == k
     assert next(C)[4] == k
 

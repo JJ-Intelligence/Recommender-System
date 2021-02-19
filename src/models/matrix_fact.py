@@ -1,6 +1,7 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy as np
+from numpy import linalg as LA
 
 from src import TrainDataset
 
@@ -11,6 +12,7 @@ class CustomMatrix(ABC):
 
 
 class SparseMatrix(CustomMatrix):
+
     def __init__(self, dataset: TrainDataset):
         """
         dataset: user id, item id, rating, timestamp
@@ -83,14 +85,14 @@ class LazyMatrix(CustomMatrix):
     def lazy_sub(R: SparseMatrix, PQ):
         """Lazy eval of R - PQ"""
         assert R.shape == PQ.shape
-        matrix = LazyMatrix((np.subtract(R.get_item_vec(i+1) - row) for i, row in enumerate(PQ)), PQ.shape)
+        matrix = LazyMatrix((np.subtract(R.get_item_vec(i + 1) - row) for i, row in enumerate(PQ)), PQ.shape)
         assert matrix.shape == PQ.shape
         return matrix
 
     @staticmethod
     def lazy_pow(P, power: int):
         """ Raises each value in matrix P to the given power"""
-        return LazyMatrix((row**power for row in P.generator), P.shape)
+        return LazyMatrix((row ** power for row in P.generator), P.shape)
 
     @staticmethod
     def lazy_mean(P):
@@ -104,7 +106,8 @@ class MatrixFactoriser:
         """
 
     @staticmethod
-    def loss_mse(R, P, Q):
+    def loss_mse(R: SparseMatrix, P: np.array, Q: np.array, l: int):
         """Returns the MSE loss for matrix factorization, where R ~= P.Q"""
-        val = LazyMatrix.lazy_pow(LazyMatrix.lazy_sub(R, LazyMatrix.lazy_dot(P, Q)), 2)
-        return np.mean(val(), axis=0)
+        return \
+            np.mean(LazyMatrix.lazy_pow(LazyMatrix.lazy_sub(R, LazyMatrix.lazy_dot(P, Q)), 2), axis=0) \
+            + l * (LA.norm(P) ** 2 + LA.norm(Q) ** 2)
