@@ -66,4 +66,7 @@ class MatrixFactoriser(ModelABC):
     def predict(self, dataset: TestDataset) -> np.ndarray:
         predictions = []
 
+        for user_id, item_id, timestamp in dataset.dataset.iterrows():
+            H
+
         return np.asarray(predictions)
