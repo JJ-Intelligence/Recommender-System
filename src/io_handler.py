@@ -29,7 +29,7 @@ def read_test_csv(filename: str) -> TestDataset:
     return TestDataset(dataset)
 
 
-def _read_csv_to_dataframe(filename: str, columns: List[Tuple[str, np.dtype]]) -> pd.DataFrame:
+def _read_csv_to_dataframe(filename: str, columns) -> pd.DataFrame:
     dataset = pd.read_csv(
         filename,
         names=[name for name, _ in columns],

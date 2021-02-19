@@ -22,13 +22,34 @@ class ModelABC(ABC):
 
         return Evaluation(
             mse=metrics.mean_squared_error(y_true, y_preds),
+            accuracy=metrics.accuracy_score(y_true, y_preds),
+            f1=metrics.f1_score(y_true, y_preds)
         )
 
 
 class EpochBar(Bar):
-    message = 'Processing'
+    message = 'Training'
     fill = '#'
-    suffix = '%(index)d/%(max)d - %(remaining_minutes)d mins'
+    suffix = '%(index)d / %(max)d - %(remaining_minutes)d:%(remaining_seconds)d eta'
 
+    @property
     def remaining_minutes(self):
         return self.eta // 60
+
+    @property
+    def remaining_seconds(self):
+        return self.eta % 60
+
+
+class PercentageBar(Bar):
+    message = 'Processing'
+    fill = '#'
+    suffix = '%(percent).1f%% - %(remaining_minutes)d:%(remaining_seconds)d eta'
+
+    @property
+    def remaining_minutes(self):
+        return self.eta // 60
+
+    @property
+    def remaining_seconds(self):
+        return self.eta % 60
