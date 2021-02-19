@@ -2,12 +2,12 @@ import numpy as np
 import pandas as pd
 from pytest import fixture
 
-from models.matrix_fact import DictMatrix
-from src import TrainDataset
+from models.matrix_fact import DictMatrix, MatrixFactoriser
+from src import TrainDataset, EvaluationDataset
 
 
 @fixture
-def dataset():
+def train_dataset():
     dataset = pd.DataFrame({
         "user id": [5, 10, 20, 24, 10, 5],
         "item id": [1, 3, 1, 2, 5, 9],
@@ -18,10 +18,26 @@ def dataset():
 
 
 @fixture
-def dict_matrix(dataset):
-    return DictMatrix(dataset)
+def eval_dataset():
+    dataset = pd.DataFrame({
+        "user id": [10, 2, 24, 5, 20],
+        "item id": [9, 2, 5, 1, 4],
+        "timestamp": [1, 2, 3, 4, 5],
+    })
+    ratings = pd.Series([1, 4, 0.5, 4.5, 3, 2.5])
+    return EvaluationDataset(dataset, ratings)
+
+
+@fixture
+def dict_matrix(train_dataset):
+    return DictMatrix(train_dataset)
 
 
 def test_dict_matrix_size(dict_matrix):
     assert dict_matrix.num_items() == 5
     assert dict_matrix.num_users() == 4
+
+
+def test_matrix_factoriser_train(train_dataset, eval_dataset):
+    factoriser = MatrixFactoriser(k=10, hw_init=0.1)
+    factoriser.train(train_dataset, eval_dataset=eval_dataset)
