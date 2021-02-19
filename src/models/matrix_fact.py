@@ -67,7 +67,7 @@ class MatrixFactoriser(ModelABC):
         eval_history = []
         with EpochBar('Training', max=epochs) as bar:
             for epoch in range(epochs):
-                self._train_step(R, self.H, self.W, lr)
+                self.train_step(R, self.H, self.W, lr)
                 if eval_dataset is not None:
                     eval_result = self.eval(eval_dataset)
                     eval_history.append(eval_result)
@@ -105,9 +105,9 @@ class MatrixFactoriser(ModelABC):
                     predictions.append(pred)
                 else:
                     # TODO add some case for a new item (cold start)
-                    pass
+                    predictions.append(0)
             else:
                 # TODO add some case for a new user (cold start)
-                pass
+                predictions.append(0)
 
-        return np.asarray(predictions)
+        return np.asarray(predictions, dtype=np.float16)

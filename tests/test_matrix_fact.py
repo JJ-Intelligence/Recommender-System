@@ -13,7 +13,7 @@ def train_dataset():
         "item id": [1, 3, 1, 2, 5, 9],
         "timestamp": [1, 2, 3, 4, 5, 6],
     })
-    ratings = pd.Series([1, 4, 0.5, 4.5, 3, 2.5])
+    ratings = pd.Series([1, 4, 0.5, 4.5, 3, 2.5], dtype=np.float16)
     return TrainDataset(dataset, ratings)
 
 
@@ -24,7 +24,7 @@ def eval_dataset():
         "item id": [9, 2, 5, 1, 4],
         "timestamp": [1, 2, 3, 4, 5],
     })
-    ratings = pd.Series([1, 4, 0.5, 4.5, 3, 2.5])
+    ratings = pd.Series([1, 4, 0.5, 4.5, 3], dtype=np.float16)
     return EvaluationDataset(dataset, ratings)
 
 
