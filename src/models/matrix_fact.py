@@ -23,7 +23,7 @@ class DictMatrix:
         self.item_map = {}
 
         repeat = 10000 if len(dataset.dataset) > 1_000_000 else 1
-        with PercentageBar('Processing', max=len(dataset.dataset)//repeat) as bar:
+        with PercentageBar('Reading Pandas', max=len(dataset.dataset)//repeat) as bar:
             for i, (user_id, item_id, timestamp, rating) in dataset.dataset.iterrows():
 
                 user_index = self.user_map.setdefault(user_id, len(self.user_map))
@@ -65,7 +65,7 @@ class MatrixFactoriser(ModelABC):
         self.W = np.full((self.k, R.num_items()), self.hw_init)
 
         eval_history = []
-        with EpochBar('Processing', max=epochs) as bar:
+        with EpochBar('Training', max=epochs) as bar:
             for epoch in range(epochs):
                 self._train_step(R, self.H, self.W, lr)
                 if eval_dataset is not None:
@@ -78,9 +78,8 @@ class MatrixFactoriser(ModelABC):
 
     # @njit(parallel=True)
     @staticmethod
-    def _train_step(R: DictMatrix, H: np.ndarray, W: np.ndarray, lr: float):
-        for user_index, item_index, rating in R.users_ratings:
-
+    def train_step(R: DictMatrix, H: np.ndarray, W: np.ndarray, lr: float):
+        for i, (user_index, item_index, rating) in enumerate(R.users_ratings):
             pred = MatrixFactoriser._predict_user_item_rating(H, W, user_index, item_index)
             diff = lr * 2 * (rating - pred)
 
