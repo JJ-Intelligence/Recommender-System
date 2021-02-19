@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
 
     print("Starting reading CSVs")
-    train_dataset, evaluation_dataset = read_train_csv(args.trainfile, test_size=0.9999)
+    train_dataset, evaluation_dataset = read_train_csv(args.trainfile, test_size=0.2)
     test_dataset = read_test_csv(args.testfile)
 
     print("Starting training")

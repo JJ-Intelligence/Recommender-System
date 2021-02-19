@@ -15,25 +15,11 @@ class DictMatrix:
 
         self.user_map = self.series_to_index_map(dataset.dataset["user id"])
         self.item_map = self.series_to_index_map(dataset.dataset["item id"])
-        self.users_ratings = dataset.dataset.to_numpy()[[0, 1, 3]]
-
-
-        self.users_ratings = []
-        self.user_map = {}
-        self.item_map = {}
-
-        repeat = 10000 if len(dataset.dataset) > 1_000_000 else 1
-        with PercentageBar('Reading Pandas', max=len(dataset.dataset)//repeat) as bar:
-            for i, (user_id, item_id, timestamp, rating) in dataset.dataset.iterrows():
-
-                user_index = self.user_map.setdefault(user_id, len(self.user_map))
-                item_index = self.item_map.setdefault(item_id, len(self.item_map))
-
-                # Adding ratings for each (user, item) pair - if the user doesn't exist, it will add it.
-                self.users_ratings.append((user_index, item_index, rating))
-
-                if i % repeat == 0:
-                    bar.next()
+        self.users_ratings_len = len(dataset.dataset)
+        self.users_ratings = map(
+            lambda row: (self.user_map[np.int32(row[0])], self.item_map[np.int32(row[1])], row[2]),
+            dataset.dataset.to_numpy()[:, [0, 1, 3]]
+        )
 
     def num_users(self):
         return len(self.user_map)
@@ -67,8 +53,10 @@ class MatrixFactoriser(ModelABC):
         eval_history = []
         with EpochBar('Training', max=epochs) as bar:
             for epoch in range(epochs):
+                print("Epoch:", epoch)
                 self.train_step(R, self.H, self.W, lr)
                 if eval_dataset is not None:
+                    print("Evaluation:")
                     eval_result = self.eval(eval_dataset)
                     eval_history.append(eval_result)
                     print(eval_result)
@@ -79,15 +67,17 @@ class MatrixFactoriser(ModelABC):
     # @njit(parallel=True)
     @staticmethod
     def train_step(R: DictMatrix, H: np.ndarray, W: np.ndarray, lr: float):
-        for i, (user_index, item_index, rating) in enumerate(R.users_ratings):
-            pred = MatrixFactoriser._predict_user_item_rating(H, W, user_index, item_index)
-            diff = lr * 2 * (rating - pred)
+        with EpochBar('Training Step', max=R.users_ratings_len) as bar:
+            for i, (user_index, item_index, rating) in enumerate(R.users_ratings):
+                pred = MatrixFactoriser._predict_user_item_rating(H, W, user_index, item_index)
+                diff = lr * 2 * (rating - pred)
 
-            dmse_dh = diff * W[:, item_index]
-            dmse_dw = diff * H[user_index, :]
+                dmse_dh = diff * W[:, item_index]
+                dmse_dw = diff * H[user_index, :]
 
-            H[user_index, :] += dmse_dh
-            W[:, item_index] += dmse_dw
+                H[user_index, :] += dmse_dh
+                W[:, item_index] += dmse_dw
+                bar.next()
 
     @staticmethod
     def _predict_user_item_rating(H: np.ndarray, W: np.ndarray, user_index: int, item_index: int):
