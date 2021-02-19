@@ -47,8 +47,8 @@ class MatrixFactoriser(ModelABC):
         R = DictMatrix(dataset)
         self.user_map, self.item_map = R.get_user_item_maps()
 
-        self.H = np.full((R.num_users(), self.k), self.hw_init)
-        self.W = np.full((self.k, R.num_items()), self.hw_init)
+        self.H = np.full((R.num_users(), self.k), self.hw_init, dtype=np.float16)
+        self.W = np.full((self.k, R.num_items()), self.hw_init, dtype=np.float16)
 
         eval_history = []
         with EpochBar('Training', max=epochs) as bar:
