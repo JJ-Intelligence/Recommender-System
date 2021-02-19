@@ -16,8 +16,8 @@ class DictMatrix:
         self.user_map = {}
         self.item_map = {}
 
-        repeat = 10000
-        with PercentageBar('Processing', max=len(dataset.dataset)//repeat) as bar:
+        repeat = 1000
+        with PercentageBar('Reading Pandas', max=len(dataset.dataset)//repeat) as bar:
             for i, (user_id, item_id, timestamp, rating) in dataset.dataset.iterrows():
 
                 user_index = self.user_map.setdefault(user_id, len(self.user_map))
@@ -49,32 +49,29 @@ class MatrixFactoriser(ModelABC):
 
     def train(self, dataset: TrainDataset, eval_dataset: EvaluationDataset = None, epochs: int = 1, lr: float = 0.001):
         R = DictMatrix(dataset)
+        self.user_map, self.item_map = R.get_user_item_maps()
 
         self.H = np.full((R.num_users(), self.k), self.hw_init)
         self.W = np.full((self.k, R.num_items()), self.hw_init)
 
-        with EpochBar('Processing', max=epochs) as bar:
+        with EpochBar('Training', max=epochs) as bar:
             for epoch in range(epochs):
                 self.train_step(R, self.H, self.W, lr)
                 if eval_dataset is not None:
                     print(self.eval(eval_dataset))
                 bar.next()
 
-        self.user_map, self.item_map = R.get_user_item_maps()
-
-    # @njit(parallel=True)
     @staticmethod
     def train_step(R: DictMatrix, H: np.ndarray, W: np.ndarray, lr: float):
-        for user_index, item_index, rating in R.users_ratings:
-
+        for i, (user_index, item_index, rating) in enumerate(R.users_ratings):
             pred = MatrixFactoriser._predict_user_item_rating(H, W, user_index, item_index)
             diff = lr * 2 * (rating - pred)
 
-            dmse_dh = diff * W[item_index, :]
+            dmse_dh = diff * W[:, item_index]
             dmse_dw = diff * H[user_index, :]
 
             H[user_index, :] += dmse_dh
-            W[user_index, :] += dmse_dw
+            W[:, item_index] += dmse_dw
 
     @staticmethod
     def _predict_user_item_rating(H: np.ndarray, W: np.ndarray, user_index: int, item_index: int):
@@ -83,7 +80,7 @@ class MatrixFactoriser(ModelABC):
     def predict(self, dataset: TestDataset) -> np.ndarray:
         predictions = []
 
-        for user_id, item_id, timestamp in dataset.dataset.iterrows():
+        for i, (user_id, item_id, timestamp) in dataset.dataset.iterrows():
             if user_id in self.user_map:
                 user_index = self.user_map[user_id]
                 if item_id in self.item_map:

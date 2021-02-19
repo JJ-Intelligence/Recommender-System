@@ -27,29 +27,23 @@ class ModelABC(ABC):
         )
 
 
-class EpochBar(Bar):
+class MasterBar(Bar):
+    @property
+    def remaining_minutes(self):
+        return self.eta // 60
+
+    @property
+    def remaining_seconds(self):
+        return self.eta % 60
+
+
+class EpochBar(MasterBar):
     message = 'Training'
     fill = '#'
-    suffix = '%(index)d / %(max)d - %(remaining_minutes)d:%(remaining_seconds)d eta'
-
-    @property
-    def remaining_minutes(self):
-        return self.eta // 60
-
-    @property
-    def remaining_seconds(self):
-        return self.eta % 60
+    suffix = '%(index)d / %(max)d - %(remaining_minutes)d:%(remaining_seconds)s eta'
 
 
-class PercentageBar(Bar):
+class PercentageBar(MasterBar):
     message = 'Processing'
     fill = '#'
-    suffix = '%(percent).1f%% - %(remaining_minutes)d:%(remaining_seconds)d eta'
-
-    @property
-    def remaining_minutes(self):
-        return self.eta // 60
-
-    @property
-    def remaining_seconds(self):
-        return self.eta % 60
+    suffix = '%(percent).1f%% - %(remaining_minutes)d:%(remaining_seconds)s eta'
