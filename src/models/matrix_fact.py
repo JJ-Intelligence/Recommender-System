@@ -1,9 +1,7 @@
-from typing import Tuple, List
-
 import numpy as np
 from numba import njit
 
-from src import TrainDataset, ModelABC, TestDataset, EvaluationDataset, EpochBar, PercentageBar
+from src import TrainDataset, ModelABC, TestDataset, EvaluationDataset, EpochBar
 
 
 class DictMatrix:
@@ -11,8 +9,6 @@ class DictMatrix:
     def __init__(self, dataset: TrainDataset):
         """
         dataset: user id, item id, rating, timestamp
-
-        user id + item id -> rating
         """
 
         self.user_map = self.series_to_index_map(dataset.dataset["user id"])
@@ -56,12 +52,11 @@ def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_s
 
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray, item_indices: np.ndarray, ratings: np.ndarray, H: np.ndarray, W: np.ndarray,
-                 lr: float):
+                 lr: float, alpha: float = 0, beta: float = 0):
     predictions = _predict_ratings(H, W, user_indices, item_indices)
-    diffs = lr * 2 * (ratings - predictions)
-
-    dmse_dh = (diffs * W[:, item_indices]).T
-    dmse_dw = diffs * H[user_indices, :].T
+    residuals = lr * 2 * (ratings - predictions)
+    dmse_dh = lr * ((residuals * W[:, item_indices]).T + (alpha * H[user_indices, :]))
+    dmse_dw = lr * ((residuals * H[user_indices, :].T) + (beta * W[:, item_indices]))
 
     return dmse_dh, dmse_dw
 
