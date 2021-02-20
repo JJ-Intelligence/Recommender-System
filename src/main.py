@@ -16,23 +16,25 @@ def main():
                         help='File to output predictions')
     args = parser.parse_args()
 
-    print("Starting reading CSVs")
-    train_dataset, evaluation_dataset = read_train_csv(args.trainfile, test_size=0.2)
-    test_dataset = read_test_csv(args.testfile)
+    print("Reading training CSV")
+    train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
 
     print("Starting training")
     model = MatrixFactoriser(k=10, hw_init=0.1)
     model.train(train_dataset, eval_dataset=evaluation_dataset, epochs=100, lr=0.001)
 
-    print("Starting predicting")
-    predictions = model.predict(test_dataset)
-
-    print("Writing output")
-    write_output_csv(args.outputfile, predictions)
-
-    print("Final evaluation")
+    print("Run on test set")
     evaluation = model.eval(evaluation_dataset)
     print(evaluation)
+
+    print("Reading prediction dataset")
+    predict_dataset = read_test_csv(args.testfile)
+
+    print("Creating predictions")
+    predictions = model.predict(predict_dataset)
+
+    print("Writing prediction output")
+    write_output_csv(args.outputfile, predictions)
 
 
 if __name__ == "__main__":
