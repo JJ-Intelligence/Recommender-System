@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from pytest import fixture
 
-from models.matrix_fact import DictMatrix, MatrixFactoriser
+from models.matrix_fact import DictMatrix, MatrixFactoriser, _train_batch, _predict_ratings
 from src import TrainDataset, EvaluationDataset
 
 
@@ -41,3 +41,23 @@ def test_dict_matrix_size(dict_matrix):
 def test_matrix_factoriser_train(train_dataset, eval_dataset):
     factoriser = MatrixFactoriser(k=10, hw_init=0.1)
     factoriser.train(train_dataset, eval_dataset=eval_dataset)
+
+
+def test_predict_ratings():
+    k = 4
+    H = np.random.normal(0, 1, size=(9, k))
+    W = np.random.normal(0, 2, size=(k, 20))
+    user_indices = np.asarray([0, 1, 2, 1, 1, 0, 7, 4, 3])
+    item_indices = np.asarray([0, 5, 10, 19, 5, 0, 12, 12, 13])
+
+    # predict_ratings result
+    result = _predict_ratings(H, W, user_indices, item_indices)
+
+    # Manually make a prediction
+    expected = []
+    for (user_index, item_index) in zip(user_indices, item_indices):
+        expected.append(H[user_index, :].dot(W[:, item_index]))
+    expected = np.asarray(expected)
+
+    assert result.shape == (9,)
+    assert np.allclose(expected, result)

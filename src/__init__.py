@@ -19,7 +19,6 @@ class ModelABC(ABC):
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
         test_dataset, y_true = evaluation_dataset.to_test_dataset()
         y_preds = self.predict(test_dataset)
-
         return Evaluation(
             mse=metrics.mean_squared_error(y_true, y_preds),
         )
@@ -34,14 +33,25 @@ class MasterBar(Bar):
     def remaining_seconds(self):
         return self.eta % 60
 
+    @property
+    def elapsed_minutes(self):
+        return self.elapsed // 60
+
+    @property
+    def elapsed_seconds(self):
+        return self.elapsed % 60
+
 
 class EpochBar(MasterBar):
+    mse = 0
     message = 'Training'
     fill = '#'
-    suffix = '%(index)d / %(max)d - %(remaining_minutes)d:%(remaining_seconds)s eta'
+    suffix = '%(index)d / %(max)d - elapsed %(elapsed_minutes)02d:%(elapsed_seconds)02d - eta %(' \
+             'remaining_minutes)02d:%(remaining_seconds)02d - Eval mse %(mse)f'
 
 
 class PercentageBar(MasterBar):
     message = 'Processing'
     fill = '#'
-    suffix = '%(percent).1f%% - %(remaining_minutes)d:%(remaining_seconds)s eta'
+    suffix = '%(percent).1f%% - elapsed %(elapsed_minutes)02d:%(elapsed_seconds)02d - eta %(remaining_minutes)02d:%(' \
+             'remaining_seconds)02d'
