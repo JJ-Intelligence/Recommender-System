@@ -1,3 +1,8 @@
-pandas
-numpy
+pandas~=1.2.2
+numpy~=1.20.1
 sklearn
+
+numba~=0.52.0
+scikit-learn~=0.24.1
+progress~=1.5
+pytest~=6.2.2
