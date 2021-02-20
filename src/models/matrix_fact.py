@@ -73,25 +73,24 @@ def _predict_ratings(H: np.ndarray, W: np.ndarray, user_indices: np.ndarray, ite
 
 
 class MatrixFactoriser(ModelABC):
-    def __init__(self, k: int, hw_init: float):
+    def __init__(self, dataset: TrainDataset, k: int, hw_init: float):
         self.k = k
         self.hw_init = hw_init
 
-        self.H = self.W = None
-        self.user_map = self.item_map = None
+        self.R = DictMatrix(dataset)
+        self.user_map, self.item_map = self.R.get_user_item_maps()
 
-    def train(self, dataset: TrainDataset, eval_dataset: EvaluationDataset = None, epochs: int = 10, lr: float = 0.001):
-        R = DictMatrix(dataset)
-        self.user_map, self.item_map = R.get_user_item_maps()
+        self.H = np.full((self.R.num_users(), self.k), self.hw_init, dtype=np.float32)
+        self.W = np.full((self.k, self.R.num_items()), self.hw_init, dtype=np.float32)
 
-        self.H = np.full((R.num_users(), self.k), self.hw_init, dtype=np.float32)
-        self.W = np.full((self.k, R.num_items()), self.hw_init, dtype=np.float32)
+    def train(self, eval_dataset: EvaluationDataset = None, epochs: int = 10, lr: float = 0.001):
+        """Deprecated - call train step now"""
 
         eval_history = []
         # Training epochs
         with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                _train_step(R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
+                _train_step(self.R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
 
                 # Evaluate at the end of the epoch
                 if eval_dataset is not None:
@@ -101,6 +100,13 @@ class MatrixFactoriser(ModelABC):
                 bar.next()
 
         return eval_history
+
+    def train_step(self, eval_dataset: EvaluationDataset = None, lr: float = 0.001, batch_size=100_000):
+        _train_step(self.R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
+
+        # Evaluate at the end of the epoch
+        if eval_dataset is not None:
+            return self.eval(eval_dataset)
 
     def predict(self, dataset: TestDataset) -> np.ndarray:
         def _pred(user_id, item_id):
