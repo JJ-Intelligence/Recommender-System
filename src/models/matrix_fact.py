@@ -18,7 +18,7 @@ class DictMatrix:
         self.user_map = self.series_to_index_map(dataset.dataset["user id"])
         self.item_map = self.series_to_index_map(dataset.dataset["item id"])
         self.users_ratings = np.asarray(list(map(
-            lambda row: [self.user_map[np.int32(row[0])], self.item_map[np.int32(row[1])], row[2]],
+            lambda row: [self.user_map[row[0]], self.item_map[row[1]], row[2]],
             dataset.dataset.to_numpy()[:, [0, 1, 3]]
         )))
 
