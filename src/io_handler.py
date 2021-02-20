@@ -9,7 +9,7 @@ from src.data import TrainDataset, TestDataset, EvaluationDataset
 def read_train_csv(filename: str, test_size=0.2) -> (TrainDataset, TrainDataset):
     dataset = _read_csv_to_dataframe(
         filename,
-        [("user id", np.int32), ("item id", np.int32), ("user rating", np.float16), ("timestamp", np.float32)]
+        [("user id", np.int32), ("item id", np.int32), ("user rating", np.float32), ("timestamp", np.float32)]
     )
 
     x_train, x_evaluation, y_train, y_evaluation = train_test_split(

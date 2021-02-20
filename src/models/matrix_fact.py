@@ -1,5 +1,7 @@
+from typing import Tuple, List
+
 import numpy as np
-from numba import njit
+from numba import njit, jit
 
 from src import TrainDataset, ModelABC, TestDataset, EvaluationDataset, EpochBar, PercentageBar
 
@@ -16,10 +18,10 @@ class DictMatrix:
         self.user_map = self.series_to_index_map(dataset.dataset["user id"])
         self.item_map = self.series_to_index_map(dataset.dataset["item id"])
         self.users_ratings_len = len(dataset.dataset)
-        self.users_ratings = map(
+        self.users_ratings = list(map(
             lambda row: (self.user_map[np.int32(row[0])], self.item_map[np.int32(row[1])], row[2]),
             dataset.dataset.to_numpy()[:, [0, 1, 3]]
-        )
+        ))
 
     def num_users(self):
         return len(self.user_map)
@@ -35,6 +37,26 @@ class DictMatrix:
         return {val: index for index, val in enumerate(series.unique())}
 
 
+def train_step(users_ratings, H: np.ndarray, W: np.ndarray, lr: float):
+    repeat = 10000
+    with PercentageBar('Training Step', max=len(users_ratings)/repeat) as bar:
+        for i, (user_index, item_index, rating) in enumerate(users_ratings):
+            pred = predict_user_item_rating(H, W, user_index, item_index)
+            diff = lr * 2 * (rating - pred)
+
+            dmse_dh = diff * W[:, item_index]
+            dmse_dw = diff * H[user_index, :]
+
+            H[user_index, :] += dmse_dh
+            W[:, item_index] += dmse_dw
+            if i % repeat == 0:
+                bar.next()
+
+
+def predict_user_item_rating(H: np.ndarray, W: np.ndarray, user_index: int, item_index: int):
+    return H[user_index, :].dot(W[:, item_index])
+
+
 class MatrixFactoriser(ModelABC):
     def __init__(self, k: int, hw_init: float):
         self.k = k
@@ -47,14 +69,14 @@ class MatrixFactoriser(ModelABC):
         R = DictMatrix(dataset)
         self.user_map, self.item_map = R.get_user_item_maps()
 
-        self.H = np.full((R.num_users(), self.k), self.hw_init, dtype=np.float16)
-        self.W = np.full((self.k, R.num_items()), self.hw_init, dtype=np.float16)
+        self.H = np.full((R.num_users(), self.k), self.hw_init, dtype=np.float32)
+        self.W = np.full((self.k, R.num_items()), self.hw_init, dtype=np.float32)
 
         eval_history = []
-        with EpochBar('Training', max=epochs) as bar:
+        with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                print("Epoch:", epoch)
-                self.train_step(R, self.H, self.W, lr)
+                print(f"\nEpoch: {epoch} / {epochs}")
+                train_step(R.users_ratings, self.H, self.W, lr)
                 if eval_dataset is not None:
                     print("Evaluation:")
                     eval_result = self.eval(eval_dataset)
@@ -64,40 +86,39 @@ class MatrixFactoriser(ModelABC):
 
         return eval_history
 
-    # @njit(parallel=True)
-    @staticmethod
-    def train_step(R: DictMatrix, H: np.ndarray, W: np.ndarray, lr: float):
-        with EpochBar('Training Step', max=R.users_ratings_len) as bar:
-            for i, (user_index, item_index, rating) in enumerate(R.users_ratings):
-                pred = MatrixFactoriser._predict_user_item_rating(H, W, user_index, item_index)
-                diff = lr * 2 * (rating - pred)
-
-                dmse_dh = diff * W[:, item_index]
-                dmse_dw = diff * H[user_index, :]
-
-                H[user_index, :] += dmse_dh
-                W[:, item_index] += dmse_dw
-                bar.next()
-
-    @staticmethod
-    def _predict_user_item_rating(H: np.ndarray, W: np.ndarray, user_index: int, item_index: int):
-        return H[user_index, :].dot(W[:, item_index])
-
     def predict(self, dataset: TestDataset) -> np.ndarray:
-        predictions = []
 
-        for i, (user_id, item_id, timestamp) in dataset.dataset.iterrows():
+        def _pred(user_id, item_id):
             if user_id in self.user_map:
                 user_index = self.user_map[user_id]
                 if item_id in self.item_map:
                     item_index = self.item_map[item_id]
-                    pred = MatrixFactoriser._predict_user_item_rating(self.H, self.W, user_index, item_index)
-                    predictions.append(pred)
+                    return predict_user_item_rating(self.H, self.W, user_index, item_index)
                 else:
                     # TODO add some case for a new item (cold start)
-                    predictions.append(0)
+                    return 3.0
             else:
                 # TODO add some case for a new user (cold start)
-                predictions.append(0)
+                return 3.0
 
-        return np.asarray(predictions, dtype=np.float16)
+        return np.asarray(
+            [_pred(user_id, item_id) for user_id, item_id in dataset.dataset[["user id", "item id"]].to_numpy()],
+            dtype=np.float16
+        )
+
+        # predictions = []
+        # for i, (user_id, item_id, timestamp) in dataset.dataset.iterrows():
+        #     if user_id in self.user_map:
+        #         user_index = self.user_map[user_id]
+        #         if item_id in self.item_map:
+        #             item_index = self.item_map[item_id]
+        #             pred = predict_user_item_rating(self.H, self.W, user_index, item_index)
+        #             predictions.append(pred)
+        #         else:
+        #             # TODO add some case for a new item (cold start)
+        #             predictions.append(0)
+        #     else:
+        #         # TODO add some case for a new user (cold start)
+        #         predictions.append(0)
+
+        # return np.asarray(predictions, dtype=np.float16)
