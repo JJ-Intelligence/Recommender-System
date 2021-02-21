@@ -7,7 +7,7 @@ from models.matrix_fact import MatrixFactoriser
 
 
 TRAINING_ITERATIONS = 1000
-CHECKPOINT_FREQ = 2  # How frequently to save checkpoints
+CHECKPOINT_FREQ = 50  # How frequently to save checkpoints
 
 
 def custom_trainable(config, data, checkpoint_dir=None):
@@ -32,7 +32,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
                 hw_init=config["hw_init"]
             )
 
-    for i in range(TRAINING_ITERATIONS):
+    for i in range(1, TRAINING_ITERATIONS+1):
         ev = model.train_step(
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
@@ -44,7 +44,6 @@ def custom_trainable(config, data, checkpoint_dir=None):
             save_checkpoint(i)
 
         tune.report(mse=ev.mse)
-    save_checkpoint(TRAINING_ITERATIONS)
 
 
 def start_training(train_dataset, evaluation_dataset):
@@ -61,13 +60,13 @@ def start_training(train_dataset, evaluation_dataset):
         mode="min",
         config={
             "model_type": "matrix_fact",
-            "k": tune.grid_search([16, 32, 64, 128]),
+            "k": tune.grid_search([2, 8, 32, 128]),
             "hw_init": 0.1,
             "batch_size": 100_000,
             "lr": tune.grid_search([0.01, 0.001])
         },
         resources_per_trial={
-         "cpu": 4
+         "cpu": 2
         },
         verbose=3
     )

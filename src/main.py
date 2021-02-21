@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from models.matrix_fact import MatrixFactoriser
 from src.io_handler import read_train_csv, read_test_csv, write_output_csv
@@ -23,7 +24,35 @@ def main():
 
         print("Reading training CSV")
         train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
-        start_training(train_dataset, evaluation_dataset)
+
+        print("\n---- Starting training ----")
+        an = start_training(train_dataset, evaluation_dataset)
+        print("\n---- Finished training ----")
+
+        print("\nBest trial:")
+        print(an.best_trial)
+        print("\nBest checkpoint:")
+        print(an.best_checkpoint)
+        print("\nBest config:")
+        print(an.best_config)
+        print("\nBest result:")
+        print(an.best_result)
+
+        print("\n---- Loading best checkpoint model ----")
+        model = MatrixFactoriser()
+        model.load(os.path.join(an.best_checkpoint, "model.npz"))
+
+        print("MSE on test dataset")
+        print(model.eval(test_dataset))
+
+        print("Reading prediction dataset")
+        predict_dataset = read_test_csv(args.testfile)
+
+        print("Creating predictions")
+        predictions = model.predict(predict_dataset)
+
+        print("Writing prediction output")
+        write_output_csv(args.outputfile, predictions)
 
     elif args.run_option == "run":
 
