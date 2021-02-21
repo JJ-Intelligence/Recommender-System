@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-#PBS -l walltime=00:05:00
+#PBS -l walltime=12:00:00
+#PBS –l nodes=1:ppn=16
+#PBS -m ae -M jp6g18@soton.ac.uk
 
 module load singularity/3.2.0
 export PYTHONPATH="${PYTHONPATH}:/lyceum/jp6g18/Recommender-System/src"
