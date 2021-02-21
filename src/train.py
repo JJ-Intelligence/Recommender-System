@@ -6,7 +6,7 @@ from models.matrix_fact import MatrixFactoriser
 TRAINING_ITERATIONS = 100
 
 
-def custom_trainable(config, data):
+def custom_trainable(config, data, checkpoint_dir=None):
     train_dataset, eval_dataset = data
     model = {
         "matrix_fact": MatrixFactoriser(
@@ -29,7 +29,7 @@ def start_training(train_dataset, evaluation_dataset):
     tune.run(
         tune.with_parameters(custom_trainable, data=(train_dataset, evaluation_dataset)),
         name="recommender-system",
-        local_dir="../results",
+        local_dir="results/",
         metric="mse",
         mode="min",
         config={
