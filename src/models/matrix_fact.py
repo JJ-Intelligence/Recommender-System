@@ -54,7 +54,7 @@ def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_s
 def _train_batch(user_indices: np.ndarray, item_indices: np.ndarray, ratings: np.ndarray, H: np.ndarray, W: np.ndarray,
                  lr: float, alpha: float = 0, beta: float = 0):
     predictions = _predict_ratings(H, W, user_indices, item_indices)
-    residuals = lr * 2 * (ratings - predictions)
+    residuals = 2 * (ratings - predictions)
     dmse_dh = lr * ((residuals * W[:, item_indices]).T + (alpha * H[user_indices, :]))
     dmse_dw = lr * ((residuals * H[user_indices, :].T) + (beta * W[:, item_indices]))
 
@@ -86,7 +86,7 @@ class MatrixFactoriser(ModelABC):
         # Training epochs
         with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                _train_step(R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
+                _train_step(R.users_ratings, self.H, self.W, batch_size=5_000, lr=lr)
 
                 # Evaluate at the end of the epoch
                 if eval_dataset is not None:
@@ -94,6 +94,8 @@ class MatrixFactoriser(ModelABC):
                     eval_history.append(eval_result)
                     bar.mse = eval_result.mse
                 bar.next()
+        print("H:", self.H)
+        print("W:", self.W)
 
         return eval_history
 

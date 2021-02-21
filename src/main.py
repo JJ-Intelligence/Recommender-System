@@ -21,7 +21,7 @@ def main():
 
     print("Starting training")
     model = MatrixFactoriser(k=10, hw_init=0.1)
-    model.train(train_dataset, eval_dataset=evaluation_dataset, epochs=100, lr=0.001)
+    model.train(train_dataset, eval_dataset=evaluation_dataset, epochs=10, lr=0.001)
 
     print("Run on test set")
     evaluation = model.eval(evaluation_dataset)
