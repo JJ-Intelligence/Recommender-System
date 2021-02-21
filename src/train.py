@@ -1,13 +1,14 @@
 import os
 from datetime import datetime
+from math import inf
 
 from ray import tune
 
 from models.matrix_fact import MatrixFactoriser
 
 
-TRAINING_ITERATIONS = 1000
-CHECKPOINT_FREQ = 50  # How frequently to save checkpoints
+TRAINING_ITERATIONS = 500
+CHECKPOINT_FREQ = 5  # How frequently to save checkpoints
 
 
 def custom_trainable(config, data, checkpoint_dir=None):
@@ -31,6 +32,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
                 k=config["k"],
                 hw_init=config["hw_init"]
             )
+    prev_mse = prev_prev_mse = inf
 
     for i in range(1, TRAINING_ITERATIONS+1):
         ev = model.train_step(
@@ -44,6 +46,11 @@ def custom_trainable(config, data, checkpoint_dir=None):
             save_checkpoint(i)
 
         tune.report(mse=ev.mse)
+
+        if prev_mse < ev.mse and prev_prev_mse < ev.mse:
+            break
+
+        prev_prev_mse, prev_mse = prev_mse, ev.mse
 
 
 def start_training(train_dataset, evaluation_dataset):
@@ -60,13 +67,13 @@ def start_training(train_dataset, evaluation_dataset):
         mode="min",
         config={
             "model_type": "matrix_fact",
-            "k": tune.grid_search([2, 8, 32, 128]),
+            "k": tune.grid_search([1, 2, 4, 8, 16, 32, 64, 128]),
             "hw_init": 0.1,
-            "batch_size": 100_000,
+            "batch_size": tune.grid_search([100_000, 1000_000]),
             "lr": tune.grid_search([0.01, 0.001])
         },
         resources_per_trial={
-         "cpu": 4
+         "cpu": 2
         },
         verbose=3
     )
