@@ -8,4 +8,4 @@ cd $PBS_O_WORKDIR
 
 module load singularity/3.2.0
 export PYTHONPATH="${PYTHONPATH}:/lyceum/jp6g18/git/Recommender-System/src"
-singularity exec /lyceum/jp6g18/git/Recommender-System/image.sif python /lyceum/jp6g18/git/Recommender-System/src/main.py --trainfile datasets/comp3208-train-small.csv --testfile datasets/comp3208-test-small.csv --outputfile predictions.csv
+singularity exec /lyceum/jp6g18/git/Recommender-System/image.sif python /lyceum/jp6g18/git/Recommender-System/src/main.py --trainfile datasets/comp3208-train.csv --testfile datasets/comp3208-test.csv --outputfile predictions.csv

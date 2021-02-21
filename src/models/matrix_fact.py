@@ -3,7 +3,7 @@ from typing import Tuple, List
 import numpy as np
 from numba import njit
 
-from src import TrainDataset, ModelABC, TestDataset, EvaluationDataset, EpochBar, PercentageBar
+from src import TrainDataset, ModelBase, TestDataset, EvaluationDataset, EpochBar, PercentageBar
 
 
 class DictMatrix:
@@ -37,7 +37,7 @@ class DictMatrix:
 
 
 @njit
-def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float):
+def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float):
     """ Perform a single training step (1 epoch) """
     user_indices = users_ratings[:, 0].astype(np.int32)
     item_indices = users_ratings[:, 1].astype(np.int32)
@@ -72,25 +72,36 @@ def _predict_ratings(H: np.ndarray, W: np.ndarray, user_indices: np.ndarray, ite
     return np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)
 
 
-class MatrixFactoriser(ModelABC):
-    def __init__(self, dataset: TrainDataset, k: int, hw_init: float):
+class MatrixFactoriser(ModelBase):
+    def __init__(self):
+        super().__init__()
+        self.R = None
+
+    def initialise(self, k: int, hw_init: float):
         self.k = k
         self.hw_init = hw_init
 
-        self.R = DictMatrix(dataset)
+    def setup_model(self, train_dataset: TrainDataset):
+
+        self.R = DictMatrix(train_dataset)
         self.user_map, self.item_map = self.R.get_user_item_maps()
 
         self.H = np.full((self.R.num_users(), self.k), self.hw_init, dtype=np.float32)
         self.W = np.full((self.k, self.R.num_items()), self.hw_init, dtype=np.float32)
 
-    def train(self, eval_dataset: EvaluationDataset = None, epochs: int = 10, lr: float = 0.001):
-        """Deprecated - call train step now"""
+    def train(self, train_dataset: TrainDataset,
+              eval_dataset: EvaluationDataset = None,
+              epochs: int = 10,
+              lr: float = 0.001,
+              batch_size=100_000):
+        """For debug mode - call train step when using trainer"""
 
+        self.setup_model(train_dataset)
         eval_history = []
         # Training epochs
         with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                _train_step(self.R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
+                do_train_step(self.R.users_ratings, self.H, self.W, batch_size=batch_size, lr=lr)
 
                 # Evaluate at the end of the epoch
                 if eval_dataset is not None:
@@ -101,8 +112,12 @@ class MatrixFactoriser(ModelABC):
 
         return eval_history
 
-    def train_step(self, eval_dataset: EvaluationDataset = None, lr: float = 0.001, batch_size=100_000):
-        _train_step(self.R.users_ratings, self.H, self.W, batch_size=100_000, lr=lr)
+    def train_step(self, train_dataset: TrainDataset, eval_dataset: EvaluationDataset, lr: float = 0.001, batch_size=100_000):
+
+        if self.R is None:
+            self.setup_model(train_dataset)
+
+        do_train_step(self.R.users_ratings, self.H, self.W, batch_size=batch_size, lr=lr)
 
         # Evaluate at the end of the epoch
         if eval_dataset is not None:
@@ -126,3 +141,9 @@ class MatrixFactoriser(ModelABC):
             [_pred(user_id, item_id) for user_id, item_id in dataset.dataset[["user id", "item id"]].to_numpy()],
             dtype=np.float32
         )
+
+    def save(self, checkpoint_file):
+        pass
+
+    def load(self, checkpoint_file):
+        pass
