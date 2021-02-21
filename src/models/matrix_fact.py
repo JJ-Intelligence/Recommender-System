@@ -86,8 +86,10 @@ class MatrixFactoriser(ModelBase):
         self.R = DictMatrix(train_dataset)
         self.user_map, self.item_map = self.R.get_user_item_maps()
 
-        self.H = np.full((self.R.num_users(), self.k), self.hw_init, dtype=np.float32)
-        self.W = np.full((self.k, self.R.num_items()), self.hw_init, dtype=np.float32)
+        norm_mean = 0
+        norm_stddev = 0.5
+        self.H = np.random.normal(norm_mean, norm_stddev, (self.R.num_users(), self.k)).astype(np.float32)
+        self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
 
     def train(self, train_dataset: TrainDataset,
               eval_dataset: EvaluationDataset = None,
