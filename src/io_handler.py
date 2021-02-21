@@ -1,5 +1,4 @@
 import numpy as np
-import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -46,11 +45,14 @@ def _read_csv_to_dataframe(filename: str, columns) -> pd.DataFrame:
         names=[name for name, _ in columns],
     )
 
-    def col_to_type(col_name, data_type):
-        dataset[col_name] = pd.to_numeric(dataset[col_name], errors="coerce").dropna().astype(data_type)
+    # Set all non-numeric values to NaN
+    for name, _ in columns:
+        dataset[name] = pd.to_numeric(dataset[name], errors="coerce")
 
+    # Set column types and remove NaNs
+    dataset.dropna(inplace=True)
     for name, col_type in columns:
-        col_to_type(name, col_type)
+        dataset[name] = dataset[name].astype(col_type)
 
     return dataset
 
