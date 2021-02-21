@@ -9,7 +9,7 @@ from train import start_training
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('run_option', choices=['run', 'gridsearch', 'load'])
+    parser.add_argument('run_option', choices=['run', 'tune', 'load'])
     parser.add_argument('--trainfile', type=str,
                         help='File containing the train data')
     parser.add_argument('--testfile', type=str,
@@ -20,7 +20,7 @@ def main():
                         help='Checkpoint file to load')
     args = parser.parse_args()
 
-    if args.run_option == "gridsearch":
+    if args.run_option == "tune":
 
         print("Reading training CSV")
         train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
