@@ -79,8 +79,10 @@ class MatrixFactoriser(ModelABC):
         R = DictMatrix(dataset)
         self.user_map, self.item_map = R.get_user_item_maps()
 
-        self.H = np.full((R.num_users(), self.k), self.hw_init, dtype=np.float32)
-        self.W = np.full((self.k, R.num_items()), self.hw_init, dtype=np.float32)
+        norm_mean = 0
+        norm_stddev = 0.5
+        self.H = np.random.normal(norm_mean, norm_stddev, (R.num_users(), self.k)).astype(np.float32)
+        self.W = np.random.normal(norm_mean, norm_stddev, (self.k, R.num_items())).astype(np.float32)
 
         eval_history = []
         # Training epochs
@@ -94,8 +96,6 @@ class MatrixFactoriser(ModelABC):
                     eval_history.append(eval_result)
                     bar.mse = eval_result.mse
                 bar.next()
-        print("H:", self.H)
-        print("W:", self.W)
 
         return eval_history
 
