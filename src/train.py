@@ -66,7 +66,7 @@ def start_training(train_dataset, evaluation_dataset):
             "lr": tune.grid_search([0.01, 0.001])
         },
         resources_per_trial={
-         "cpu": 2
+         "cpu": 4
         },
         verbose=3
     )
