@@ -56,5 +56,5 @@ def _read_csv_to_dataframe(filename: str, columns) -> pd.DataFrame:
 
 
 def write_output_csv(filename: str, predictions):
-    with open(filename, 'r') as file:
-        file.write("\n".join(predictions))
+    with open(filename, 'w') as file:
+        file.write("\n".join(str(pred) for pred in predictions))

@@ -14,8 +14,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
     def save_checkpoint(x):
         with tune.checkpoint_dir(step=x) as _checkpoint_dir:
             path = os.path.join(_checkpoint_dir, "checkpoint")
-            with open(path, "w") as _f:
-                model.save(_f)
+            model.save(path)
 
     train_dataset, eval_dataset = data
 
@@ -25,8 +24,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
 
     # If loading the model from checkpoint
     if checkpoint_dir:
-        with open(os.path.join(checkpoint_dir, "checkpoint")) as f:
-            model.load(f)
+        model.load(os.path.join(checkpoint_dir, "checkpoint"))
     else:
         if config["model_type"] == "matrix_fact":
             model.initialise(

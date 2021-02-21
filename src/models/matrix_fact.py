@@ -8,15 +8,18 @@ from src import TrainDataset, ModelBase, TestDataset, EvaluationDataset, EpochBa
 
 class DictMatrix:
 
-    def __init__(self, dataset: TrainDataset):
+    def __init__(self, dataset: TrainDataset, maps=None):
         """
         dataset: user id, item id, rating, timestamp
 
         user id + item id -> rating
         """
+        if maps is None:
+            self.user_map = self.series_to_index_map(dataset.dataset["user id"])
+            self.item_map = self.series_to_index_map(dataset.dataset["item id"])
+        else:
+            self.user_map, self.item_map = maps
 
-        self.user_map = self.series_to_index_map(dataset.dataset["user id"])
-        self.item_map = self.series_to_index_map(dataset.dataset["item id"])
         self.users_ratings = np.asarray(list(map(
             lambda row: [self.user_map[np.int32(row[0])], self.item_map[np.int32(row[1])], row[2]],
             dataset.dataset.to_numpy()[:, [0, 1, 3]]
@@ -75,7 +78,7 @@ def _predict_ratings(H: np.ndarray, W: np.ndarray, user_indices: np.ndarray, ite
 class MatrixFactoriser(ModelBase):
     def __init__(self):
         super().__init__()
-        self.R = None
+        self.H = self.W = self.R = self.user_map = self.item_map = None
 
     def initialise(self, k: int, hw_init: float):
         self.k = k
@@ -83,7 +86,12 @@ class MatrixFactoriser(ModelBase):
 
     def setup_model(self, train_dataset: TrainDataset):
 
-        self.R = DictMatrix(train_dataset)
+        if self.item_map is not None and self.user_map is not None:
+            # maps have been preloaded from file
+            self.R = DictMatrix(train_dataset, (self.user_map, self.item_map))
+        else:
+            # maps not yet loaded
+            self.R = DictMatrix(train_dataset)
         self.user_map, self.item_map = self.R.get_user_item_maps()
 
         self.H = np.full((self.R.num_users(), self.k), self.hw_init, dtype=np.float32)
@@ -143,7 +151,16 @@ class MatrixFactoriser(ModelBase):
         )
 
     def save(self, checkpoint_file):
-        pass
+        user_map_np = np.array(list(self.user_map.items()), dtype="i4,i4")
+        item_map_np = np.array(list(self.item_map.items()), dtype="i4,i4")
+        np.savez(checkpoint_file, H=self.H, W=self.W, user_map=user_map_np, item_map=item_map_np)
 
     def load(self, checkpoint_file):
-        pass
+        npzfile = np.load(checkpoint_file)
+        self.H = npzfile["H"]
+        self.W = npzfile["W"]
+        self.user_map, self.item_map = extra_dict_from_np(npzfile["user_map"]), extra_dict_from_np(npzfile["item_map"])
+
+
+def extra_dict_from_np(np_arr: np.ndarray):
+    return {key: value for key, value in np_arr}
