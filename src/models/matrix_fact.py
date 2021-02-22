@@ -33,7 +33,8 @@ class DictMatrix:
 
 
 @njit
-def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float):
+def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float,
+                reg_H: float, reg_W: float):
     """ Perform a single training step (1 epoch) """
     user_indices = users_ratings[:, 0].astype(np.int32)
     item_indices = users_ratings[:, 1].astype(np.int32)
@@ -44,7 +45,7 @@ def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_s
             user_indices[i:i + batch_size],
             item_indices[i:i + batch_size],
             ratings[i:i + batch_size],
-            H, W, lr)
+            H, W, lr, reg_H, reg_W)
 
         H[user_indices[i:i + batch_size], :] += dmse_dh
         W[:, item_indices[i:i + batch_size]] += dmse_dw
@@ -52,11 +53,11 @@ def _train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_s
 
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray, item_indices: np.ndarray, ratings: np.ndarray, H: np.ndarray, W: np.ndarray,
-                 lr: float, alpha: float = 0, beta: float = 0):
+                 lr: float, reg_H: float, reg_W: float):
     predictions = _predict_ratings(H, W, user_indices, item_indices)
     residuals = 2 * (ratings - predictions)
-    dmse_dh = lr * ((residuals * W[:, item_indices]).T + (alpha * H[user_indices, :]))
-    dmse_dw = lr * ((residuals * H[user_indices, :].T) + (beta * W[:, item_indices]))
+    dmse_dh = lr * ((residuals * W[:, item_indices]).T + (reg_H * H[user_indices, :]))
+    dmse_dw = lr * ((residuals * H[user_indices, :].T) + (reg_W * W[:, item_indices]))
 
     return dmse_dh, dmse_dw
 
@@ -75,7 +76,7 @@ class MatrixFactoriser(ModelABC):
         self.H = self.W = None
         self.user_map = self.item_map = None
 
-    def train(self, dataset: TrainDataset, eval_dataset: EvaluationDataset = None, epochs: int = 10, lr: float = 0.001):
+    def train(self, dataset: TrainDataset, eval_dataset: EvaluationDataset = None, epochs: int = 10, lr: float = 0.01):
         R = DictMatrix(dataset)
         self.user_map, self.item_map = R.get_user_item_maps()
 
@@ -88,7 +89,7 @@ class MatrixFactoriser(ModelABC):
         # Training epochs
         with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                _train_step(R.users_ratings, self.H, self.W, batch_size=5_000, lr=lr)
+                _train_step(R.users_ratings, self.H, self.W, batch_size=5_000, lr=lr, reg_H=0.1, reg_W=0.1)
 
                 # Evaluate at the end of the epoch
                 if eval_dataset is not None:

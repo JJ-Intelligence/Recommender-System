@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
 
     print("Reading training CSV")
-    train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.01, eval_size=0.98)
+    train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
 
     print("Starting training")
     model = MatrixFactoriser(k=20, hw_init=0.1)
