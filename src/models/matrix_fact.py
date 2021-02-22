@@ -1,5 +1,3 @@
-from typing import Tuple, List
-
 import numpy as np
 from numba import njit
 
@@ -11,8 +9,6 @@ class DictMatrix:
     def __init__(self, dataset: TrainDataset, maps=None):
         """
         dataset: user id, item id, rating, timestamp
-
-        user id + item id -> rating
         """
         if maps is None:
             self.user_map = self.series_to_index_map(dataset.dataset["user id"])
@@ -40,7 +36,8 @@ class DictMatrix:
 
 
 @njit
-def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float):
+def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch_size: int, lr: float,
+                reg_H: float, reg_W: float):
     """ Perform a single training step (1 epoch) """
     user_indices = users_ratings[:, 0].astype(np.int32)
     item_indices = users_ratings[:, 1].astype(np.int32)
@@ -51,7 +48,7 @@ def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch
             user_indices[i:i + batch_size],
             item_indices[i:i + batch_size],
             ratings[i:i + batch_size],
-            H, W, lr)
+            H, W, lr, reg_H, reg_W)
 
         H[user_indices[i:i + batch_size], :] += dmse_dh
         W[:, item_indices[i:i + batch_size]] += dmse_dw
@@ -59,12 +56,11 @@ def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch
 
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray, item_indices: np.ndarray, ratings: np.ndarray, H: np.ndarray, W: np.ndarray,
-                 lr: float):
+                 lr: float, reg_H: float, reg_W: float):
     predictions = _predict_ratings(H, W, user_indices, item_indices)
-    diffs = lr * 2 * (ratings - predictions)
-
-    dmse_dh = (diffs * W[:, item_indices]).T
-    dmse_dw = diffs * H[user_indices, :].T
+    residuals = 2 * (ratings - predictions)
+    dmse_dh = lr * ((residuals * W[:, item_indices]).T + (reg_H * H[user_indices, :]))
+    dmse_dw = lr * ((residuals * H[user_indices, :].T) + (reg_W * W[:, item_indices]))
 
     return dmse_dh, dmse_dw
 
@@ -99,11 +95,14 @@ class MatrixFactoriser(ModelBase):
         self.H = np.random.normal(norm_mean, norm_stddev, (self.R.num_users(), self.k)).astype(np.float32)
         self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
 
-    def train(self, train_dataset: TrainDataset,
+    def train(self,
+              train_dataset: TrainDataset,
               eval_dataset: EvaluationDataset = None,
               epochs: int = 10,
               lr: float = 0.001,
-              batch_size=100_000):
+              batch_size: int = 100_000,
+              user_reg: float = 0.1,
+              item_reg: float = 0.1):
         """For debug mode - call train step when using trainer"""
 
         self.setup_model(train_dataset)
@@ -111,23 +110,35 @@ class MatrixFactoriser(ModelBase):
         # Training epochs
         with EpochBar('Training Step', max=epochs) as bar:
             for epoch in range(epochs):
-                do_train_step(self.R.users_ratings, self.H, self.W, batch_size=batch_size, lr=lr)
-
-                # Evaluate at the end of the epoch
+                evaluation = self.train_step(train_dataset, eval_dataset, lr, batch_size, user_reg, item_reg)
                 if eval_dataset is not None:
-                    eval_result = self.eval(eval_dataset)
-                    eval_history.append(eval_result)
-                    bar.mse = eval_result.mse
+                    eval_history.append(evaluation)
+                    bar.mse = evaluation.mse
+
                 bar.next()
 
         return eval_history
 
-    def train_step(self, train_dataset: TrainDataset, eval_dataset: EvaluationDataset, lr: float = 0.001, batch_size=100_000):
+    def train_step(self,
+                   train_dataset: TrainDataset,
+                   eval_dataset: EvaluationDataset = None,
+                   lr: float = 0.001,
+                   batch_size=100_000,
+                   user_reg: float = 0.1,
+                   item_reg: float = 0.1):
 
         if self.R is None:
             self.setup_model(train_dataset)
 
-        do_train_step(self.R.users_ratings, self.H, self.W, batch_size=batch_size, lr=lr)
+        do_train_step(
+            self.R.users_ratings,
+            self.H,
+            self.W,
+            batch_size=batch_size,
+            lr=lr,
+            reg_H=user_reg,
+            reg_W=item_reg
+        )
 
         # Evaluate at the end of the epoch
         if eval_dataset is not None:
