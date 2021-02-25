@@ -18,6 +18,8 @@ def main():
                         help='File to output predictions')
     parser.add_argument('--checkpointfile', type=str,
                         help='Checkpoint file to load')
+    parser.add_argument('--timebudget', type=int,
+                        help='Time budget in seconds')
     args = parser.parse_args()
 
     if args.run_option == "tune":
@@ -26,7 +28,10 @@ def main():
         train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
 
         print("\n---- Starting training ----")
-        an = start_training(train_dataset, evaluation_dataset)
+        if args.timebudget:
+            an = start_training(train_dataset, evaluation_dataset, args.timebudget)
+        else:
+            an = start_training(train_dataset, evaluation_dataset)
         print("\n---- Finished training ----")
 
         print("\nBest trial:")
@@ -40,7 +45,7 @@ def main():
 
         print("\n---- Loading best checkpoint model ----")
         model = MatrixFactoriser()
-        model.load(os.path.join(an.best_checkpoint, "model.npz"))
+        model.load(os.path.join(an.best_checkpoint, "checkpoint.npz"))
 
         print("MSE on test dataset")
         print(model.eval(test_dataset))
