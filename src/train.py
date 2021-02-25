@@ -103,7 +103,7 @@ def start_training(train_dataset, evaluation_dataset, time_budget=3600):
         },
         verbose=3,
         keep_checkpoints_num=4,
-        checkpoint_score_attr="mse",
+        checkpoint_score_attr="min-mse",
         num_samples=4,
         time_budget_s=time_budget
     )
