@@ -2,7 +2,7 @@ import argparse
 import os
 
 from models.matrix_fact import MatrixFactoriser
-from src.io_handler import read_train_csv, read_test_csv, write_output_csv
+from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
 
@@ -61,7 +61,7 @@ def main():
 
         print("Starting training")
         model = MatrixFactoriser()
-        model.initialise(k=10, hw_init=0.1)
+        model.initialise(k=10, hw_init_stddev=0.1)
         model.train(train_dataset=train_dataset, eval_dataset=evaluation_dataset, epochs=2, lr=0.001)
 
         model.save("model.npz")

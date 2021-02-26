@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from src.data import TrainDataset, TestDataset, EvaluationDataset
+from data import TrainDataset, TestDataset, EvaluationDataset
 
 DEFAULT_RESULTS_FOLDER = "../results/"
 

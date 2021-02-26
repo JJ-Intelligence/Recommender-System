@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from pytest import fixture
 
+from data import EvaluationDataset, TrainDataset
 from models.matrix_fact import DictMatrix, MatrixFactoriser, _train_batch, _predict_ratings
-from src import TrainDataset, EvaluationDataset
 
 
 @fixture
