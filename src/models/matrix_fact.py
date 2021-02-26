@@ -1,7 +1,9 @@
 import numpy as np
 from numba import njit
 
-from src import TrainDataset, ModelBase, TestDataset, EvaluationDataset, EpochBar, PercentageBar
+from data import TrainDataset, EvaluationDataset, TestDataset
+from models.model_base import ModelBase
+from progress_bars import EpochBar
 
 
 class DictMatrix:

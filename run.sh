@@ -10,9 +10,8 @@
 echo "Starting Job"
 
 module load python/3.6.4
-module load cuda/10.2
 source venv/bin/activate
-export PYTHONPATH="${PYTHONPATH}:${SLURM_SUBMIT_DIR}/src"
+export PYTHONPATH="${PYTHONPATH}:${SLURM_SUBMIT_DIR}/src/"
 python src/main.py tune --trainfile datasets/comp3208-train.csv --testfile datasets/comp3208-test.csv --outputfile predictions.csv
 
 echo "Finishing job"
