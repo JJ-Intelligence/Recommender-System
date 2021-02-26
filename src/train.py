@@ -67,7 +67,7 @@ def start_training(train_dataset, evaluation_dataset):
     bohb_hyperband = HyperBandForBOHB(
         time_attr="training_iteration",
         max_t=TRAINING_ITERATIONS,
-        reduction_factor=4,
+        reduction_factor=3,
         mode="min",
         metric="mse")
 
@@ -93,10 +93,10 @@ def start_training(train_dataset, evaluation_dataset):
         # resources_per_trial={
         #  "cpu": 2
         # },
-        verbose=2,
+        verbose=3,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         keep_checkpoints_num=5,
         num_samples=200,
-        time_budget_s=3600*47
+        time_budget_s=int(3600*47.5)
     )

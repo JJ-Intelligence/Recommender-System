@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
-from typing import Tuple
+from typing import Tuple, Type
+
+from numpy import ndarray
 
 
 class TestDataset:
@@ -19,5 +21,5 @@ class TrainDataset:
 
 class EvaluationDataset(TrainDataset):
     """Data from the train file, which will be used to evaluate the performance of a model"""
-    def to_test_dataset(self) -> Tuple[TestDataset, np.ndarray]:
+    def to_test_dataset(self) -> Tuple[TestDataset, Type[ndarray]]:
         return TestDataset(self.X), self.y.to_numpy()

@@ -2,7 +2,7 @@
 #SBATCH --ntasks-per-node=28
 #SBATCH --nodes=1
 #SBATCH --partition=lycium
-#SBATCH --time=1:00:00
+#SBATCH --time=48:00:00
 #SBATCH --gres=gpu:0
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jp6g18@soton.ac.uk
