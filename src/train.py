@@ -3,12 +3,14 @@ from datetime import datetime
 from math import inf
 
 from ray import tune
+from ray.tune.schedulers import HyperBandForBOHB
+from ray.tune.suggest.bohb import TuneBOHB
 
 from models.matrix_fact import MatrixFactoriser
 
 
-TRAINING_ITERATIONS = 500
-CHECKPOINT_FREQ = 5  # How frequently to save checkpoints
+TRAINING_ITERATIONS = 200
+CHECKPOINT_FREQ = 10  # How frequently to save checkpoints
 
 
 def custom_trainable(config, data, checkpoint_dir=None):
@@ -30,7 +32,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
         if config["model_type"] == "matrix_fact":
             model.initialise(
                 k=config["k"],
-                hw_init=config["hw_init"]
+                hw_init_stddev=config["hw_init_stddev"]
             )
     prev_mse = prev_prev_mse = inf
 
@@ -39,7 +41,9 @@ def custom_trainable(config, data, checkpoint_dir=None):
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             lr=config["lr"],
-            batch_size=config["batch_size"]
+            batch_size=config["batch_size"],
+            user_reg=config["user_reg"],
+            item_reg=config["item_reg"],
         )
 
         if i % CHECKPOINT_FREQ == 0:
@@ -47,8 +51,8 @@ def custom_trainable(config, data, checkpoint_dir=None):
 
         tune.report(mse=ev.mse)
 
-        if prev_mse < ev.mse and prev_prev_mse < ev.mse:
-            break
+        # if prev_mse < ev.mse and prev_prev_mse < ev.mse:
+        #     break
 
         prev_prev_mse, prev_mse = prev_mse, ev.mse
 
@@ -59,21 +63,40 @@ def start_training(train_dataset, evaluation_dataset):
     :param evaluation_dataset:
     :return: tune.ExperimentAnalysis
     """
+
+    bohb_hyperband = HyperBandForBOHB(
+        time_attr="training_iteration",
+        max_t=TRAINING_ITERATIONS,
+        reduction_factor=4,
+        mode="min",
+        metric="mse")
+
+    bohb_search = TuneBOHB(
+        # space=config_space,  # If you want to set the space manually
+        max_concurrent=10,
+        mode="min",
+        metric="mse")
+
     return tune.run(
         tune.with_parameters(custom_trainable, data=(train_dataset, evaluation_dataset)),
         name="recommender-system"+str(datetime.now()).replace(":", "-").replace(".", "-"),
         local_dir="results/",
-        metric="mse",
-        mode="min",
         config={
             "model_type": "matrix_fact",
-            "k": tune.grid_search([1, 2, 4, 8, 16, 32, 64, 128]),
-            "hw_init": 0.1,
-            "batch_size": tune.grid_search([100_000, 1000_000]),
-            "lr": tune.grid_search([0.01, 0.001])
+            "k": tune.choice([1, 2, 4, 8, 16, 32]),
+            "hw_init_stddev": tune.uniform(0, 1),
+            "user_reg": tune.uniform(0, 0.5),
+            "item_reg": tune.uniform(0, 0.5),
+            "batch_size": tune.choice([16384, 32768, 65536, 131072]),
+            "lr": tune.loguniform(1e-5, 1e-3)
         },
-        resources_per_trial={
-         "cpu": 2
-        },
-        verbose=3
+        # resources_per_trial={
+        #  "cpu": 2
+        # },
+        verbose=2,
+        scheduler=bohb_hyperband,
+        search_alg=bohb_search,
+        keep_checkpoints_num=5,
+        num_samples=200,
+        time_budget_s=3600*47
     )

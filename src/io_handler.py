@@ -7,7 +7,7 @@ from src.data import TrainDataset, TestDataset, EvaluationDataset
 DEFAULT_RESULTS_FOLDER = "../results/"
 
 
-def read_train_csv(filename: str, test_size=0.1, eval_size=0.1) -> (TrainDataset, EvaluationDataset, EvaluationDataset):
+def read_train_csv(filename: str, test_size=0.1, eval_size=0) -> (TrainDataset, EvaluationDataset, EvaluationDataset):
     dataset = _read_csv_to_dataframe(
         filename,
         [("user id", np.int32), ("item id", np.int32), ("user rating", np.float32), ("timestamp", np.float32)]
@@ -16,19 +16,23 @@ def read_train_csv(filename: str, test_size=0.1, eval_size=0.1) -> (TrainDataset
     x_train, x_evaluation, y_train, y_evaluation = train_test_split(
         dataset[["user id", "item id", "timestamp"]],
         dataset[["user rating"]],
-        test_size=eval_size,
+        test_size=test_size,
         shuffle=True)
+    if eval_size > 0:
+        x_train, x_test, y_train, y_test = train_test_split(
+            x_train,
+            y_train,
+            test_size=eval_size/(1-test_size),  # account for smaller train set
+            shuffle=False)
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x_train,
-        y_train,
-        test_size=test_size/(1-eval_size),  # account for smaller train set
-        shuffle=False)
-
-    return \
-        TrainDataset(x_train, y_train), \
-        EvaluationDataset(x_evaluation, y_evaluation), \
-        EvaluationDataset(x_test, y_test)
+        return \
+            TrainDataset(x_train, y_train), \
+            EvaluationDataset(x_evaluation, y_evaluation), \
+            EvaluationDataset(x_test, y_test)
+    else:
+        return \
+            TrainDataset(x_train, y_train), \
+            EvaluationDataset(x_evaluation, y_evaluation), \
 
 
 def read_test_csv(filename: str) -> TestDataset:

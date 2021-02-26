@@ -40,7 +40,7 @@ def main():
 
         print("\n---- Loading best checkpoint model ----")
         model = MatrixFactoriser()
-        model.load(os.path.join(an.best_checkpoint, "model.npz"))
+        model.load(os.path.join(an.best_checkpoint, "checkpoint.npz"))
 
         print("MSE on test dataset")
         print(model.eval(test_dataset))
@@ -83,10 +83,14 @@ def main():
         print("Loading model from:", args.checkpointfile)
         model = MatrixFactoriser()
         model.load(args.checkpointfile)
-        print(model.item_map)
 
         print("Reading prediction dataset")
         predict_dataset = read_test_csv(args.testfile)
+
+        print("Reading training CSV to test MSE")
+        train_dataset, test_dataset = read_train_csv(args.trainfile, test_size=1)
+        ev = model.eval(test_dataset)
+        print("MSE on training set:", ev.mse)
 
         print("Creating predictions")
         predictions = model.predict(predict_dataset)

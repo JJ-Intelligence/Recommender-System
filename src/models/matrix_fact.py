@@ -76,9 +76,9 @@ class MatrixFactoriser(ModelBase):
         super().__init__()
         self.H = self.W = self.R = self.user_map = self.item_map = None
 
-    def initialise(self, k: int, hw_init: float):
+    def initialise(self, k: int, hw_init_stddev: float, ):
         self.k = k
-        self.hw_init = hw_init
+        self.hw_init_stddev = hw_init_stddev
 
     def setup_model(self, train_dataset: TrainDataset):
 
@@ -91,7 +91,7 @@ class MatrixFactoriser(ModelBase):
         self.user_map, self.item_map = self.R.get_user_item_maps()
 
         norm_mean = 0
-        norm_stddev = 0.5
+        norm_stddev = self.hw_init_stddev
         self.H = np.random.normal(norm_mean, norm_stddev, (self.R.num_users(), self.k)).astype(np.float32)
         self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
 
