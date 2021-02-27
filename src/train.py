@@ -9,7 +9,7 @@ from ray.tune.suggest.bohb import TuneBOHB
 from models.matrix_fact import MatrixFactoriser
 
 
-TRAINING_ITERATIONS = 200
+TRAINING_ITERATIONS = 300
 CHECKPOINT_FREQ = 10  # How frequently to save checkpoints
 
 
@@ -83,8 +83,8 @@ def start_training(train_dataset, evaluation_dataset):
                 "hw_init_stddev": 0.5,
                 "user_reg": 0,
                 "item_reg": 0,
-                "batch_size": 131072,
-                "lr": 0.01
+                "batch_size": 16384,
+                "lr": 0.005
             }
         ])
 
@@ -95,19 +95,19 @@ def start_training(train_dataset, evaluation_dataset):
         config={
             "model_type": "matrix_fact",
             "k": tune.choice([1, 2, 4, 8, 16, 32]),
-            "hw_init_stddev": tune.uniform(0, 1),
+            "hw_init_stddev": tune.uniform(0, 2),
             "user_reg": tune.uniform(-0.3, 0.3),
             "item_reg": tune.uniform(-0.3, 0.3),
-            "batch_size": tune.choice([16384, 32768, 65536, 131072]),
-            "lr": tune.loguniform(0.001, 0.05)
+            "batch_size": tune.choice([2**14, 2**15, 2**16, 2**17]),
+            "lr": tune.loguniform(0.001, 0.02)
         },
         # resources_per_trial={
         #  "cpu": 2
         # },
-        verbose=3,
+        verbose=1,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
-        keep_checkpoints_num=5,
-        num_samples=20,
-        time_budget_s=int(3600*47.5)
+        keep_checkpoints_num=4,
+        num_samples=200,
+        time_budget_s=int(3600*23)
     )

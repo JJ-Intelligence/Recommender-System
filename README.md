@@ -10,3 +10,7 @@ COMP3208 coursework to create a recommender system
 `mv comp3208-test.csv datasets/`
 
 `mv comp3208-train.csv datasets/`
+
+## See Results
+
+`tensorboard --logdir=<logdir>`
