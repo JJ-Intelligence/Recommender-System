@@ -73,19 +73,18 @@ def start_training(train_dataset, evaluation_dataset):
 
     bohb_search = TuneBOHB(
         # space=config_space,  # If you want to set the space manually
-        max_concurrent=20,
+        max_concurrent=2,
         mode="min",
         metric="mse",
         points_to_evaluate=[
             {
                 # Starting point to evaluate
-                "model_type": "matrix_fact",
                 "k": 4,
                 "hw_init_stddev": 0.5,
                 "user_reg": 0.1,
                 "item_reg": 0.1,
                 "batch_size": 131072,
-                "lr": 1e-4
+                "lr": 0.01
             }
         ])
 
@@ -100,7 +99,7 @@ def start_training(train_dataset, evaluation_dataset):
             "user_reg": tune.uniform(0, 0.5),
             "item_reg": tune.uniform(0, 0.5),
             "batch_size": tune.choice([16384, 32768, 65536, 131072]),
-            "lr": tune.loguniform(1e-5, 1e-3)
+            "lr": tune.loguniform(0.001, 0.05)
         },
         # resources_per_trial={
         #  "cpu": 2
@@ -109,6 +108,6 @@ def start_training(train_dataset, evaluation_dataset):
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         keep_checkpoints_num=5,
-        num_samples=20,
+        num_samples=6,
         time_budget_s=int(3600*47.5)
     )
