@@ -101,9 +101,9 @@ def start_training(train_dataset, evaluation_dataset):
             "batch_size": tune.choice([2**13, 2**14, 2**15, 2**16, 2**17]),
             "lr": tune.loguniform(0.0002, 0.02)
         },
-        # resources_per_trial={
-        #  "cpu": 2
-        # },
+        resources_per_trial={
+         "cpu": 2
+        },
         verbose=1,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
