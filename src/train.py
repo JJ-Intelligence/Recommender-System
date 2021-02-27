@@ -109,5 +109,6 @@ def start_training(train_dataset, evaluation_dataset):
         search_alg=bohb_search,
         keep_checkpoints_num=4,
         num_samples=200,
-        time_budget_s=int(3600*23)
+        time_budget_s=int(3600*23),
+        raise_on_failed_trial=False
     )
