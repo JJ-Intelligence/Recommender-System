@@ -52,8 +52,13 @@ def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch
             ratings[i:i + batch_size],
             H, W, lr, reg_H, reg_W)
 
-        H[user_indices[i:i + batch_size], :] -= dmse_dh
-        W[:, item_indices[i:i + batch_size]] -= dmse_dw
+        print("H", H)
+        print("W", W)
+        print("dmse_dh", dmse_dh)
+        print("dmse_dw", dmse_dw)
+
+        H[user_indices[i:i + batch_size], :] += dmse_dh
+        W[:, item_indices[i:i + batch_size]] += dmse_dw
 
 
 @njit(parallel=True)
@@ -103,8 +108,8 @@ class MatrixFactoriser(ModelBase):
               epochs: int = 10,
               lr: float = 0.001,
               batch_size: int = 100_000,
-              user_reg: float = 0.1,
-              item_reg: float = 0.1):
+              user_reg: float = 0.01,
+              item_reg: float = 0.01):
         """For debug mode - call train step when using trainer"""
 
         self.setup_model(train_dataset)
