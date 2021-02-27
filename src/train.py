@@ -99,7 +99,7 @@ def start_training(train_dataset, evaluation_dataset):
             "user_reg": tune.uniform(-0.3, 0.3),
             "item_reg": tune.uniform(-0.3, 0.3),
             "batch_size": tune.choice([2**14, 2**15, 2**16, 2**17]),
-            "lr": tune.loguniform(0.001, 0.02)
+            "lr": tune.loguniform(0.0002, 0.02)
         },
         # resources_per_trial={
         #  "cpu": 2
@@ -108,7 +108,7 @@ def start_training(train_dataset, evaluation_dataset):
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         keep_checkpoints_num=4,
-        num_samples=200,
-        time_budget_s=int(3600*23),
+        num_samples=500,
+        time_budget_s=int(3600*35.9),
         raise_on_failed_trial=False
     )
