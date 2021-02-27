@@ -52,8 +52,8 @@ def do_train_step(users_ratings: np.ndarray, H: np.ndarray, W: np.ndarray, batch
             ratings[i:i + batch_size],
             H, W, lr, reg_H, reg_W)
 
-        H[user_indices[i:i + batch_size], :] += dmse_dh
-        W[:, item_indices[i:i + batch_size]] += dmse_dw
+        H[user_indices[i:i + batch_size], :] -= dmse_dh
+        W[:, item_indices[i:i + batch_size]] -= dmse_dw
 
 
 @njit(parallel=True)
@@ -61,8 +61,8 @@ def _train_batch(user_indices: np.ndarray, item_indices: np.ndarray, ratings: np
                  lr: float, reg_H: float, reg_W: float):
     predictions = _predict_ratings(H, W, user_indices, item_indices)
     residuals = 2 * (ratings - predictions)
-    dmse_dh = lr * ((residuals * W[:, item_indices]).T + (reg_H * H[user_indices, :]))
-    dmse_dw = lr * ((residuals * H[user_indices, :].T) + (reg_W * W[:, item_indices]))
+    dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
+    dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
 
     return dmse_dh, dmse_dw
 
@@ -78,7 +78,7 @@ class MatrixFactoriser(ModelBase):
         super().__init__()
         self.H = self.W = self.R = self.user_map = self.item_map = None
 
-    def initialise(self, k: int, hw_init_stddev: float, ):
+    def initialise(self, k: int, hw_init_stddev: float):
         self.k = k
         self.hw_init_stddev = hw_init_stddev
 
