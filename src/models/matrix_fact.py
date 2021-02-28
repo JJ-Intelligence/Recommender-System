@@ -37,7 +37,7 @@ class DictMatrix:
         return {val: index for index, val in enumerate(series.unique())}
 
 
-@njit
+# @njit
 def do_train_step(users_ratings: np.ndarray,
                   mu: np.float32,
                   bu: np.ndarray,
@@ -56,7 +56,7 @@ def do_train_step(users_ratings: np.ndarray,
     ratings = users_ratings[:, 2].astype(np.float32)
 
     for i in range(0, len(users_ratings), batch_size):
-        dmse_dbu, dmse_dbi, dmse_dh, dmse_dw, user_indices_update, item_indices_update = _train_batch(
+        dmse_dbu, dmse_dbi, dmse_dh, dmse_dw = _train_batch(
             user_indices[i:i + batch_size],
             item_indices[i:i + batch_size],
             ratings[i:i + batch_size],
@@ -73,13 +73,13 @@ def do_train_step(users_ratings: np.ndarray,
         # print("dmse_dw", dmse_dw)
 
         # Update weights, using loss gradient changes
-        bu[user_indices_update] += dmse_dbu
-        bi[item_indices_update] += dmse_dbi
-        H[user_indices_update, :] += dmse_dh
-        W[:, item_indices_update] += dmse_dw
+        np.add.at(bu, user_indices[i:i + batch_size], dmse_dbu)
+        np.add.at(bi, item_indices[i:i + batch_size], dmse_dbi)
+        np.add.at(H, np.s_[user_indices[i:i + batch_size], :], dmse_dh)
+        np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
 
 
-@njit(parallel=True)
+# @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray,
                  item_indices: np.ndarray,
                  ratings: np.ndarray,
@@ -101,30 +101,10 @@ def _train_batch(user_indices: np.ndarray,
     dmse_dbi = lr * (residuals - (reg_bi * bi[item_indices]))
     dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
     dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
-
-    # Group and reduce updates
-    user_indices_reduced = list(set(user_indices))
-    item_indices_reduced = list(set(item_indices))
-
-    dmse_dbu_reduced = reduce_grad_change(dmse_dbu, user_indices, user_indices_reduced)
-    dmse_dbi_reduced = reduce_grad_change(dmse_dbi, item_indices, item_indices_reduced)
-    dmse_dh_reduced = reduce_grad_change(dmse_dh, user_indices, user_indices_reduced)
-    dmse_dw_reduced = reduce_grad_change(dmse_dw.T, item_indices, item_indices_reduced).T
-    assert len(dmse_dbu_reduced) == len(user_indices_reduced)
-    assert len(dmse_dbi_reduced) == len(item_indices_reduced)
-    assert len(dmse_dh_reduced) == len(user_indices_reduced)
-    assert dmse_dw_reduced.shape[-1] == len(item_indices_reduced)
-
-    return dmse_dbu_reduced, dmse_dbi_reduced, dmse_dh_reduced, dmse_dw_reduced, user_indices_reduced, \
-           item_indices_reduced
+    return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
 
 
-@njit(parallel=True)
-def reduce_grad_change(grad_change, indices, indices_reduced):
-    return np.asarray([grad_change[indices == i].sum(axis=0) for i in indices_reduced])
-
-
-@njit(parallel=True)
+# @njit(parallel=True)
 def _predict_ratings(mu: np.float32,
                      bu: np.ndarray,
                      bi: np.ndarray,
@@ -133,18 +113,6 @@ def _predict_ratings(mu: np.float32,
                      user_indices: np.ndarray,
                      item_indices: np.ndarray):
     # Perform a point-wise dot product
-    print("Making prediction ---------")
-    print("mu + bu + bi = ", mu + bu[user_indices] + bi[item_indices])
-    print("Max, min = ", np.max(mu + bu[user_indices] + bi[item_indices]),
-          np.min(mu + bu[user_indices] + bi[item_indices]))
-    print("H . W = ", np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1))
-    print("Max, min = ", np.max(np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)),
-          np.min(np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)))
-    pred = mu + bu[user_indices] + bi[item_indices] + np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)
-    print("prediction = ", pred)
-    print("Max, min = ", np.max(pred), np.min(pred))
-    print("Pred shape", pred.shape)
-
     return mu + bu[user_indices] + bi[item_indices] + np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)
 
 
@@ -172,6 +140,7 @@ class MatrixFactoriser(ModelBase):
         norm_stddev = self.hw_init_stddev
         self.H = np.random.normal(norm_mean, norm_stddev, (self.R.num_users(), self.k)).astype(np.float32)
         self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
+
 
         # Biases (global mean, user bias, item bias)
         self.mu = np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
