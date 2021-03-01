@@ -37,7 +37,6 @@ class DictMatrix:
         return {val: index for index, val in enumerate(series.unique())}
 
 
-# @njit
 def do_train_step(users_ratings: np.ndarray,
                   mu: np.float32,
                   bu: np.ndarray,
@@ -69,7 +68,7 @@ def do_train_step(users_ratings: np.ndarray,
         np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
 
 
-# @njit(parallel=True)
+@njit(parallel=True)
 def _train_batch(user_indices: np.ndarray,
                  item_indices: np.ndarray,
                  ratings: np.ndarray,
@@ -87,22 +86,10 @@ def _train_batch(user_indices: np.ndarray,
     residuals = 2 * (ratings - predictions)
 
     # Gradient changes
-    dmse_dbu = 0#lr * (residuals - (reg_bu * bu[user_indices]))
-    dmse_dbi = 0#lr * (residuals - (reg_bi * bi[item_indices]))
+    dmse_dbu = lr * (residuals - (reg_bu * bu[user_indices]))
+    dmse_dbi = lr * (residuals - (reg_bi * bi[item_indices]))
     dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
     dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
-
-    print("\nIndex of largest residual")
-    ix = np.argmax(residuals)
-    print("Prediction:", predictions[ix])
-    print("Prediction biases:", mu + bi[item_indices[ix]] + bu[user_indices[ix]])
-    print("H user:", H[user_indices[ix], :])
-    print("W item:", W[:, item_indices[ix]])
-    print("Weight sum:", np.sum(H[user_indices[ix], :] * W[:, item_indices[ix]].T))
-    print("H update:", dmse_dh[ix])
-    print("W update:", dmse_dw.T[ix])
-    print("Next prediction will then be:", dmse_dh[ix].reshape(1, -1).dot(dmse_dw.T[ix]).reshape(-1, 1))
-
     return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
 
 
@@ -144,7 +131,7 @@ class MatrixFactoriser(ModelBase):
         self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
 
         # Biases (global mean, user bias, item bias)
-        self.mu = 0#np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
+        self.mu = np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
         self.bu = np.zeros(self.R.num_users(), dtype=np.float32)
         self.bi = np.zeros(self.R.num_items(), dtype=np.float32)
 
