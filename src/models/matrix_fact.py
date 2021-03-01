@@ -62,16 +62,6 @@ def do_train_step(users_ratings: np.ndarray,
             ratings[i:i + batch_size],
             mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W)
 
-        # print("BU", bu)
-        # print("dmse_dbu", dmse_dbu)
-        # print("BI", bi)
-        # print("dmse_dbi", dmse_dbi)
-        # print()
-        # print("H", H)
-        # print("dmse_dh", dmse_dh)
-        # print("W", W)
-        # print("dmse_dw", dmse_dw)
-
         # Update weights, using loss gradient changes
         np.add.at(bu, user_indices[i:i + batch_size], dmse_dbu)
         np.add.at(bi, item_indices[i:i + batch_size], dmse_dbi)
@@ -97,14 +87,26 @@ def _train_batch(user_indices: np.ndarray,
     residuals = 2 * (ratings - predictions)
 
     # Gradient changes
-    dmse_dbu = lr * (residuals - (reg_bu * bu[user_indices]))
-    dmse_dbi = lr * (residuals - (reg_bi * bi[item_indices]))
+    dmse_dbu = 0#lr * (residuals - (reg_bu * bu[user_indices]))
+    dmse_dbi = 0#lr * (residuals - (reg_bi * bi[item_indices]))
     dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
     dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
+
+    print("\nIndex of largest residual")
+    ix = np.argmax(residuals)
+    print("Prediction:", predictions[ix])
+    print("Prediction biases:", mu + bi[item_indices[ix]] + bu[user_indices[ix]])
+    print("H user:", H[user_indices[ix], :])
+    print("W item:", W[:, item_indices[ix]])
+    print("Weight sum:", np.sum(H[user_indices[ix], :] * W[:, item_indices[ix]].T))
+    print("H update:", dmse_dh[ix])
+    print("W update:", dmse_dw.T[ix])
+    print("Next prediction will then be:", dmse_dh[ix].reshape(1, -1).dot(dmse_dw.T[ix]).reshape(-1, 1))
+
     return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
 
 
-# @njit(parallel=True)
+@njit(parallel=True)
 def _predict_ratings(mu: np.float32,
                      bu: np.ndarray,
                      bi: np.ndarray,
@@ -141,9 +143,8 @@ class MatrixFactoriser(ModelBase):
         self.H = np.random.normal(norm_mean, norm_stddev, (self.R.num_users(), self.k)).astype(np.float32)
         self.W = np.random.normal(norm_mean, norm_stddev, (self.k, self.R.num_items())).astype(np.float32)
 
-
         # Biases (global mean, user bias, item bias)
-        self.mu = np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
+        self.mu = 0#np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
         self.bu = np.zeros(self.R.num_users(), dtype=np.float32)
         self.bi = np.zeros(self.R.num_items(), dtype=np.float32)
 
