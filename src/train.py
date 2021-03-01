@@ -80,11 +80,11 @@ def start_training(train_dataset, evaluation_dataset):
             {
                 # Starting point to evaluate
                 "k": 4,
-                "hw_init_stddev": 0.5,
+                "hw_init_stddev": 0.1,
                 "user_reg": 0,
                 "item_reg": 0,
                 "batch_size": 16384,
-                "lr": 0.005
+                "lr": 0.01
             }
         ])
 
@@ -94,12 +94,12 @@ def start_training(train_dataset, evaluation_dataset):
         local_dir="results/",
         config={
             "model_type": "matrix_fact",
-            "k": tune.choice([1, 2, 4, 8, 16, 32]),
-            "hw_init_stddev": tune.uniform(0, 2),
+            "k": tune.choice([2, 4, 8, 16, 32]),
+            "hw_init_stddev": tune.uniform(0, 0.5),
             "user_reg": tune.uniform(-0.5, 0.5),
             "item_reg": tune.uniform(-0.5, 0.5),
-            "batch_size": tune.choice([2**13, 2**14, 2**15, 2**16, 2**17]),
-            "lr": tune.loguniform(0.0002, 0.02)
+            "batch_size": tune.choice([2**12, 2**13, 2**14, 2**15, 2**16, 2**17]),
+            "lr": tune.loguniform(0.001, 0.02)
         },
         resources_per_trial={
          "cpu": 2
@@ -107,8 +107,8 @@ def start_training(train_dataset, evaluation_dataset):
         verbose=1,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
-        keep_checkpoints_num=2,
-        num_samples=500,
-        time_budget_s=int(3600*35.9),
+        keep_checkpoints_num=5,
+        num_samples=50,
+        time_budget_s=int(3600*15.9),
         raise_on_failed_trial=False
     )
