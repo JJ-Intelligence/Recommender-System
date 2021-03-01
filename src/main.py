@@ -66,12 +66,12 @@ def main():
             train_dataset=train_dataset,
             eval_dataset=evaluation_dataset,
             epochs=20,
-            lr=0.001,
+            lr=0.01,
             user_bias_reg=0.01,
             item_bias_reg=0.01,
             user_reg=0.01,
             item_reg=0.01,
-            batch_size=10000,
+            batch_size=1_000_000,
         )
 
         model.save("model.npz")

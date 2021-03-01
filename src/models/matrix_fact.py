@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, jit
 
 from data import TrainDataset, EvaluationDataset, TestDataset
 from models.model_base import ModelBase
@@ -58,6 +58,8 @@ def do_train_step(users_ratings: np.ndarray,
         dmse_dbu, dmse_dbi, dmse_dh, dmse_dw = _train_batch(
             user_indices[i:i + batch_size],
             item_indices[i:i + batch_size],
+            indices_to_inv_counts(user_indices[i:i + batch_size]),
+            indices_to_inv_counts(item_indices[i:i + batch_size]),
             ratings[i:i + batch_size],
             mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W)
 
@@ -68,9 +70,17 @@ def do_train_step(users_ratings: np.ndarray,
         np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
 
 
+def indices_to_inv_counts(indices):
+    # Map indices to an array of 1/<index_count>
+    _, inv, counts = np.unique(indices, return_inverse=True, return_counts=True)
+    return np.asarray([1/counts[i] for i in inv])
+
+
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray,
                  item_indices: np.ndarray,
+                 user_inv_counts: np.ndarray,
+                 item_inv_counts: np.ndarray,
                  ratings: np.ndarray,
                  mu: np.float32,
                  bu: np.ndarray,
@@ -83,13 +93,17 @@ def _train_batch(user_indices: np.ndarray,
                  reg_H: float,
                  reg_W: float):
     predictions = _predict_ratings(mu, bu, bi, H, W, user_indices, item_indices)
-    residuals = 2 * (ratings - predictions)
+    residuals = ratings - predictions
+    # print("\nPredictions:", min(predictions), max(predictions), np.mean(predictions))
+    # print("Residuals:", min(residuals), max(residuals), np.mean(residuals))
+    # print("Biases user:", min(bu), max(bu), np.mean(bu))
+    # print("Biases item:", min(bi), max(bi), np.mean(bi))
 
     # Gradient changes
-    dmse_dbu = lr * (residuals - (reg_bu * bu[user_indices]))
-    dmse_dbi = lr * (residuals - (reg_bi * bi[item_indices]))
-    dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
-    dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
+    dmse_dbu = lr * ((residuals * user_inv_counts) - (reg_bu * bu[user_indices]))
+    dmse_dbi = lr * ((residuals * item_inv_counts) - (reg_bi * bi[item_indices]))
+    dmse_dh = lr * ((user_inv_counts * residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
+    dmse_dw = lr * ((item_inv_counts * residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
     return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
 
 
