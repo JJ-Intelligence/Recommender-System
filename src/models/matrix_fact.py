@@ -106,7 +106,7 @@ class MatrixFactoriser(ModelBase):
               train_dataset: TrainDataset,
               eval_dataset: EvaluationDataset = None,
               epochs: int = 10,
-              lr: float = 0.001,
+              lr: float = 0.01,
               batch_size: int = 100_000,
               user_reg: float = 0.01,
               item_reg: float = 0.01):
@@ -129,7 +129,7 @@ class MatrixFactoriser(ModelBase):
     def train_step(self,
                    train_dataset: TrainDataset,
                    eval_dataset: EvaluationDataset = None,
-                   lr: float = 0.001,
+                   lr: float = 0.01,
                    batch_size=100_000,
                    user_reg: float = 0.1,
                    item_reg: float = 0.1):
