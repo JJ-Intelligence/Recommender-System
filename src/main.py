@@ -71,7 +71,7 @@ def main():
             item_bias_reg=0.01,
             user_reg=0.01,
             item_reg=0.01,
-            batch_size=1_000_000,
+            batch_size=100_000,
         )
 
         model.save("model.npz")

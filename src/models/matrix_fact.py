@@ -94,10 +94,6 @@ def _train_batch(user_indices: np.ndarray,
                  reg_W: float):
     predictions = _predict_ratings(mu, bu, bi, H, W, user_indices, item_indices)
     residuals = ratings - predictions
-    # print("\nPredictions:", min(predictions), max(predictions), np.mean(predictions))
-    # print("Residuals:", min(residuals), max(residuals), np.mean(residuals))
-    # print("Biases user:", min(bu), max(bu), np.mean(bu))
-    # print("Biases item:", min(bi), max(bi), np.mean(bi))
 
     # Gradient changes
     dmse_dbu = lr * ((residuals * user_inv_counts) - (reg_bu * bu[user_indices]))
@@ -201,7 +197,7 @@ class MatrixFactoriser(ModelBase):
             user_bias_reg,
             item_bias_reg,
             user_reg,
-            item_reg
+            item_reg,
         )
 
         # Evaluate at the end of the epoch
@@ -214,7 +210,8 @@ class MatrixFactoriser(ModelBase):
                 user_index = self.user_map[user_id]
                 if item_id in self.item_map:
                     item_index = self.item_map[item_id]
-                    return self.H[user_index, :].dot(self.W[:, item_index])
+                    return _predict_ratings(self.mu, self.bu, self.bi, self.H, self.W, np.asarray([user_index]),
+                                            np.asarray([item_index]))[0]
                 else:
                     # TODO add some case for a new item (cold start)
                     return 3.0
