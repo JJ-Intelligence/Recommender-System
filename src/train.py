@@ -9,7 +9,7 @@ from ray.tune.suggest.bohb import TuneBOHB
 from models.matrix_fact import MatrixFactoriser
 
 
-TRAINING_ITERATIONS = 300
+TRAINING_ITERATIONS = 200
 CHECKPOINT_FREQ = 10  # How frequently to save checkpoints
 
 
@@ -44,6 +44,8 @@ def custom_trainable(config, data, checkpoint_dir=None):
             batch_size=config["batch_size"],
             user_reg=config["user_reg"],
             item_reg=config["item_reg"],
+            user_bias_reg=config["user_reg"],
+            item_bias_reg=config["item_reg"],
         )
 
         if i % CHECKPOINT_FREQ == 0:
@@ -73,7 +75,7 @@ def start_training(train_dataset, evaluation_dataset):
 
     bohb_search = TuneBOHB(
         # space=config_space,  # If you want to set the space manually
-        max_concurrent=28,
+        max_concurrent=21,
         mode="min",
         metric="mse",
         points_to_evaluate=[
@@ -98,12 +100,14 @@ def start_training(train_dataset, evaluation_dataset):
             "hw_init_stddev": tune.uniform(0, 0.5),
             "user_reg": tune.uniform(-0.5, 0.5),
             "item_reg": tune.uniform(-0.5, 0.5),
-            "batch_size": tune.choice([2**12, 2**13, 2**14, 2**15, 2**16, 2**17]),
+            "user_bias_reg": tune.uniform(-0.5, 0.5),
+            "item_bias_reg": tune.uniform(-0.5, 0.5),
+            "batch_size": tune.choice([2**13, 2**14, 2**15, 2**16, 2**17]),
             "lr": tune.loguniform(0.001, 0.02)
         },
-        resources_per_trial={
-         "cpu": 2
-        },
+        # resources_per_trial={
+        #  "cpu": 2
+        # },
         verbose=1,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,

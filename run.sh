@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --ntasks-per-node=56
+#SBATCH --ntasks-per-node=42
 #SBATCH --nodes=1
 #SBATCH --partition=lycium
 #SBATCH --time=16:00:00
