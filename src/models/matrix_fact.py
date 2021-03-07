@@ -37,7 +37,11 @@ class DictMatrix:
         return {val: index for index, val in enumerate(series.unique())}
 
 
-def do_train_step(users_ratings: np.ndarray,
+def do_train_step(user_indices: np.ndarray,
+                  item_indices: np.ndarray,
+                  ratings: np.ndarray,
+                  user_indices_inv_counts: np.ndarray,
+                  item_indices_inv_counts: np.ndarray,
                   mu: np.float32,
                   bu: np.ndarray,
                   bi: np.ndarray,
@@ -50,17 +54,14 @@ def do_train_step(users_ratings: np.ndarray,
                   reg_H: float,
                   reg_W: float):
     """ Perform a single training step (1 epoch) """
-    user_indices = users_ratings[:, 0].astype(np.int32)
-    item_indices = users_ratings[:, 1].astype(np.int32)
-    ratings = users_ratings[:, 2].astype(np.float32)
-
-    for i in range(0, len(users_ratings), batch_size):
+    for i in range(0, len(ratings), batch_size):
+        batch_slice = np.s_[i:i + batch_size]
         dmse_dbu, dmse_dbi, dmse_dh, dmse_dw = _train_batch(
-            user_indices[i:i + batch_size],
-            item_indices[i:i + batch_size],
-            indices_to_inv_counts(user_indices[i:i + batch_size]),
-            indices_to_inv_counts(item_indices[i:i + batch_size]),
-            ratings[i:i + batch_size],
+            user_indices[batch_slice],
+            item_indices[batch_slice],
+            ratings[batch_slice],
+            user_indices_inv_counts[batch_slice],
+            item_indices_inv_counts[batch_slice],
             mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W)
 
         # Update weights, using loss gradient changes
@@ -79,9 +80,9 @@ def indices_to_inv_counts(indices):
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray,
                  item_indices: np.ndarray,
+                 ratings: np.ndarray,
                  user_inv_counts: np.ndarray,
                  item_inv_counts: np.ndarray,
-                 ratings: np.ndarray,
                  mu: np.float32,
                  bu: np.ndarray,
                  bi: np.ndarray,
@@ -118,7 +119,8 @@ def _predict_ratings(mu: np.float32,
 class MatrixFactoriser(ModelBase):
     def __init__(self):
         super().__init__()
-        self.H = self.W = self.R = self.user_map = self.item_map = None
+        self.k = self.hw_init_stddev = self.mu = self.bu = self.bi = self.H = self.W = self.R = self.user_map = \
+            self.item_map = None
 
     def initialise(self, k: int, hw_init_stddev: float):
         self.k = k
@@ -144,6 +146,12 @@ class MatrixFactoriser(ModelBase):
         self.mu = np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
         self.bu = np.zeros(self.R.num_users(), dtype=np.float32)
         self.bi = np.zeros(self.R.num_items(), dtype=np.float32)
+
+        # Add 0 rows for unknown items or users
+        self.H = np.append(self.H, np.full((1, self.k), 0), axis=0)
+        self.W = np.append(self.W, np.full((self.k, 1), 0), axis=1)
+        self.bu = np.append(self.bu, 0)
+        self.bi = np.append(self.bi, 0)
 
     def train(self,
               train_dataset: TrainDataset,
@@ -185,8 +193,18 @@ class MatrixFactoriser(ModelBase):
         if self.R is None:
             self.setup_model(train_dataset)
 
+        user_indices = self.R.users_ratings[:, 0].astype(np.int32)
+        item_indices = self.R.users_ratings[:, 1].astype(np.int32)
+        ratings = self.R.users_ratings[:, 2].astype(np.float32)
+        user_indices_inv_counts = indices_to_inv_counts(user_indices)
+        item_indices_inv_counts = indices_to_inv_counts(item_indices)
+
         do_train_step(
-            self.R.users_ratings,
+            user_indices,
+            item_indices,
+            ratings,
+            user_indices_inv_counts,
+            item_indices_inv_counts,
             self.mu,
             self.bu,
             self.bi,
@@ -205,24 +223,22 @@ class MatrixFactoriser(ModelBase):
             return self.eval(eval_dataset)
 
     def predict(self, dataset: TestDataset) -> np.ndarray:
-        def _pred(user_id, item_id):
-            if user_id in self.user_map:
-                user_index = self.user_map[user_id]
-                if item_id in self.item_map:
-                    item_index = self.item_map[item_id]
-                    return _predict_ratings(self.mu, self.bu, self.bi, self.H, self.W, np.asarray([user_index]),
-                                            np.asarray([item_index]))[0]
-                else:
-                    # TODO add some case for a new item (cold start)
-                    return 3.0
-            else:
-                # TODO add some case for a new user (cold start)
-                return 3.0
 
-        return np.asarray(
-            [_pred(user_id, item_id) for user_id, item_id in dataset.dataset[["user id", "item id"]].to_numpy()],
-            dtype=np.float32
-        )
+        # Convert user/item ids into indices
+        def id_to_index(_id, index_map):
+            if id in index_map:
+                return index_map[_id]
+
+            return len(index_map)
+
+        user_item_data = np.asarray([
+            [id_to_index(np.int32(row[0]), self.R.user_map), id_to_index(np.int32(row[1]), self.R.item_map)]
+            for row in dataset.dataset[["user id", "item id"]].to_numpy()
+        ])
+        user_indices = user_item_data[0]
+        item_indices = user_item_data[1]
+
+        return _predict_ratings(self.mu, self.bu, self.bi, self.H, self.W, user_indices, item_indices)
 
     def save(self, checkpoint_file):
         user_map_np = np.array(list(self.user_map.items()), dtype="i4,i4")
