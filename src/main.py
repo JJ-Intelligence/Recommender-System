@@ -1,8 +1,7 @@
 import argparse
 import os
 
-from models.industry_benchmark import IndustryBaselineModel
-from models.matrix_fact import MatrixFactoriser
+from models import MatrixFactoriser, RandomModel, IndustryBaselineModel
 from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
@@ -10,15 +9,13 @@ from train import start_training
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('run_option', choices=['run', 'tune', 'load', 'baseline'])
-    parser.add_argument('--trainfile', type=str,
-                        help='File containing the train data')
-    parser.add_argument('--testfile', type=str,
-                        help='File containing the test data')
-    parser.add_argument('--outputfile', type=str,
-                        help='File to output predictions')
-    parser.add_argument('--checkpointfile', type=str,
-                        help='Checkpoint file to load')
+    parser.add_argument('run_option', choices=['run', 'tune', 'load'])
+    parser.add_argument('--trainfile', type=str, help='File containing the train data')
+    parser.add_argument('--testfile', type=str, help='File containing the test data')
+    parser.add_argument('--outputfile', type=str, help='File to output predictions')
+    parser.add_argument('--checkpointfile', type=str, help='Checkpoint file to load')
+    parser.add_argument('--run_model', type=str,
+                        help='Model to use when \'run_option\' is \'run\' (MatrixFact/Random/Baseline)', default=None)
     args = parser.parse_args()
 
     if args.run_option == "tune":
@@ -55,44 +52,65 @@ def main():
         print("Writing prediction output")
         write_output_csv(args.outputfile, predictions)
 
-    elif args.run_option == "baseline":
-
-        print("Reading training CSV")
-        train_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1)
-
-        print("Training baseline model")
-        model = IndustryBaselineModel()
-        model.initialise()
-        model.train(train_dataset)
-
-        print("Run on test set")
-        evaluation = model.eval(test_dataset)
-        print(evaluation)
-
     elif args.run_option == "run":
+        model_name = args.run_model.lower()
 
         print("Reading training CSV")
         train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
 
-        print("Starting training")
-        model = MatrixFactoriser()
-        model.initialise(k=10, hw_init_stddev=0.1)
-        model.train(
-            train_dataset=train_dataset,
-            eval_dataset=evaluation_dataset,
-            epochs=20,
-            lr=0.0001,
-            user_bias_reg=0.01,
-            item_bias_reg=0.01,
-            user_reg=0.01,
-            item_reg=0.01,
-            batch_size=1000_000,
-        )
+        print("Building model", args.run_model)
+        if model_name == 'matrixfact':
+            model = MatrixFactoriser()
+            model.initialise(k=10, hw_init_stddev=0.1)
 
-        model.save("model.npz")
+            print("Starting training")
+            model.train(
+                train_dataset=train_dataset,
+                eval_dataset=evaluation_dataset,
+                epochs=20,
+                lr=0.01,
+                user_bias_reg=0.01,
+                item_bias_reg=0.01,
+                user_reg=0.01,
+                item_reg=0.01,
+                batch_size=100_000,
+            )
+
+            print("Saving model")
+            model.save("model.npz")
+
+        elif model_name == 'average':
+            model = RandomModel(is_normal=False)
+
+            print("Starting training")
+            model.train(
+                train_dataset=train_dataset,
+                eval_dataset=evaluation_dataset,
+            )
+
+        elif model_name == 'random':
+            model = RandomModel(is_normal=True)
+
+            print("Starting training")
+            model.train(
+                train_dataset=train_dataset,
+                eval_dataset=evaluation_dataset,
+            )
+
+        elif model_name == 'baseline':
+            print("Training baseline model")
+            model = IndustryBaselineModel()
+            model.initialise()
+            model.train(train_dataset)
+
+            print("Run on test set")
+            evaluation = model.eval(test_dataset)
+            print(evaluation)
+        else:
+            raise RuntimeError("Invalid argument for 'run_model'")
 
         print("Run on test set")
-        evaluation = model.eval(evaluation_dataset)
+        evaluation = model.eval(test_dataset)
         print(evaluation)
 
         print("Reading prediction dataset")
