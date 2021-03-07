@@ -226,7 +226,7 @@ class MatrixFactoriser(ModelBase):
 
         # Convert user/item ids into indices
         def id_to_index(_id, index_map):
-            if id in index_map:
+            if _id in index_map:
                 return index_map[_id]
 
             return len(index_map)
@@ -235,8 +235,8 @@ class MatrixFactoriser(ModelBase):
             [id_to_index(np.int32(row[0]), self.R.user_map), id_to_index(np.int32(row[1]), self.R.item_map)]
             for row in dataset.dataset[["user id", "item id"]].to_numpy()
         ])
-        user_indices = user_item_data[0]
-        item_indices = user_item_data[1]
+        user_indices = user_item_data[:, 0]
+        item_indices = user_item_data[:, 1]
 
         return _predict_ratings(self.mu, self.bu, self.bi, self.H, self.W, user_indices, item_indices)
 
