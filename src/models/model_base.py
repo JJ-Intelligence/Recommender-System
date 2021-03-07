@@ -39,7 +39,8 @@ class ModelBase(ABC):
         self.train_step(dataset, eval_dataset, *args, **kwargs)
 
     @abstractmethod
-    def train(self, dataset: TrainDataset, epochs: int = None, lr: float = None):
+    def train(self, dataset: TrainDataset, eval_dataset: EvaluationDataset = None, epochs: int = None,
+              lr: float = None):
         """
         Do a number of epochs of the train_step.
         This is an alternate way of running the training
