@@ -102,10 +102,6 @@ def main():
             model = IndustryBaselineModel()
             model.initialise()
             model.train(train_dataset)
-
-            print("Run on test set")
-            evaluation = model.eval(test_dataset)
-            print(evaluation)
         else:
             raise RuntimeError("Invalid argument for 'run_model'")
 
