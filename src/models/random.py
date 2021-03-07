@@ -22,6 +22,8 @@ class RandomModel(ModelBase):
     def train_step(self, dataset: TrainDataset, eval_dataset: EvaluationDataset, *args, **kwargs):
         if self.rating_mean is None:
             self.setup_model(dataset)
+        if self.rating_std is None:
+            raise RuntimeError("initialise() must be called first")
 
         if eval_dataset is not None:
             return self.eval(eval_dataset)
