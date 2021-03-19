@@ -84,13 +84,8 @@ def do_train_step(user_indices: tf.Tensor,
         bu.scatter_nd_add(tf.reshape(user_indices_batch, (-1, 1)), dmse_dbu)
         bi.scatter_nd_add(tf.reshape(item_indices_batch, (-1, 1)), dmse_dbi)
         H.scatter_nd_add(tf.reshape(user_indices_batch, (-1, 1)), dmse_dh)
-        W.scatter_nd_add(tf.reshape(item_indices_batch, (-1, 1)), dmse_dw)
-
-
-        np.add.at(bu, user_indices[i:i + batch_size], dmse_dbu)
-        np.add.at(bi, item_indices[i:i + batch_size], dmse_dbi)
-        np.add.at(H, np.s_[user_indices[i:i + batch_size], :], dmse_dh)
-        np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
+        W.scatter_nd_add(tf.reshape(item_indices_batch, (-1, 1)), dmse_dw)  # TODO - FIX ME
+        # np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
 
 
 def _train_batch(user_indices: tf.Tensor,
