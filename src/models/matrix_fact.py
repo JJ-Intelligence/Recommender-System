@@ -84,8 +84,13 @@ def do_train_step(user_indices: tf.Tensor,
         bu.scatter_nd_add(tf.reshape(user_indices_batch, (-1, 1)), dmse_dbu)
         bi.scatter_nd_add(tf.reshape(item_indices_batch, (-1, 1)), dmse_dbi)
         H.scatter_nd_add(tf.reshape(user_indices_batch, (-1, 1)), dmse_dh)
-        W.scatter_nd_add(tf.reshape(item_indices_batch, (-1, 1)), dmse_dw)  # TODO - FIX ME
-        # np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
+
+        # To update W, we need to update each individual value in it, as it's of shape (k, num_items), but dmse_dw is
+        # of shape (num_items, k)
+        feature_indices = tf.reshape(tf.convert_to_tensor(list(range(W.shape[0]))), (-1, 1))
+        W_update_item_indices = [tf.concat([feature_indices, tf.fill((len(feature_indices), 1), item_index)], axis=1)
+                                 for item_index in item_indices_batch]
+        W.scatter_nd_add(W_update_item_indices, dmse_dw)
 
 
 def _train_batch(user_indices: tf.Tensor,
