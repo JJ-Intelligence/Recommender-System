@@ -30,9 +30,7 @@ def read_train_csv(filename: str, test_size=0.1, eval_size=0) -> (TrainDataset, 
             EvaluationDataset(x_evaluation, y_evaluation), \
             EvaluationDataset(x_test, y_test)
     else:
-        return \
-            TrainDataset(x_train, y_train), \
-            EvaluationDataset(x_evaluation, y_evaluation), \
+        return TrainDataset(x_train, y_train), EvaluationDataset(x_evaluation, y_evaluation)
 
 
 def read_test_csv(filename: str) -> TestDataset:
@@ -61,6 +59,11 @@ def _read_csv_to_dataframe(filename: str, columns) -> pd.DataFrame:
     return dataset
 
 
-def write_output_csv(filename: str, predictions):
-    with open(filename, 'w') as file:
-        file.write("\n".join(str(pred) for pred in predictions))
+def write_output_csv(filename: str, test_dataset: TestDataset, predictions):
+    df = pd.DataFrame({
+        "user id": test_dataset.dataset["user id"],
+        "item id": test_dataset.dataset["item id"],
+        "rating": predictions,
+        "timestamp": test_dataset.dataset["timestamp"],
+    })
+    df.to_csv(filename, header=False)

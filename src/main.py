@@ -61,16 +61,17 @@ def main():
 
         print("Starting training")
         model = MatrixFactoriser()
-        model.initialise(k=10, hw_init_stddev=0.5)
+        model.initialise(k=32, hw_init_stddev=0.072748)
         model.train(
             train_dataset=train_dataset,
             eval_dataset=evaluation_dataset,
-            epochs=20,
-            lr=0.001,
+            epochs=100,
+            batch_size=32_768,
+            lr=0.0060962,
+            user_reg=0.32961,
+            item_reg=0.096122,
             user_bias_reg=0.1,
             item_bias_reg=0.1,
-            user_reg=0.2,
-            item_reg=0.2
         )
 
         model.save("model.npz")
@@ -86,7 +87,7 @@ def main():
         predictions = model.predict(predict_dataset)
 
         print("Writing prediction output")
-        write_output_csv(args.outputfile, predictions)
+        write_output_csv(args.outputfile, test_dataset, predictions)
 
     elif args.run_option == "load":
         print("Loading model from:", args.checkpointfile)
@@ -105,7 +106,7 @@ def main():
         predictions = model.predict(predict_dataset)
 
         print("Writing prediction output")
-        write_output_csv(args.outputfile, predictions)
+        write_output_csv(args.outputfile, test_dataset, predictions)
 
 
 if __name__ == "__main__":

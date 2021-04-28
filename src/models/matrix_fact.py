@@ -56,27 +56,18 @@ def do_train_step(users_ratings: np.ndarray,
     ratings = users_ratings[:, 2].astype(np.float32)
 
     for i in range(0, len(users_ratings), batch_size):
-        dmse_dbu, dmse_dbi, dmse_dh, dmse_dw, user_indices_update, item_indices_update = _train_batch(
+        dmse_dbu, dmse_dbi, dmse_dh, dmse_dw = _train_batch(
             user_indices[i:i + batch_size],
             item_indices[i:i + batch_size],
             ratings[i:i + batch_size],
-            mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W)
-
-        # print("BU", bu)
-        # print("dmse_dbu", dmse_dbu)
-        # print("BI", bi)
-        # print("dmse_dbi", dmse_dbi)
-        # print()
-        # print("H", H)
-        # print("dmse_dh", dmse_dh)
-        # print("W", W)
-        # print("dmse_dw", dmse_dw)
+            mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W
+        )
 
         # Update weights, using loss gradient changes
-        bu[user_indices_update] += dmse_dbu
-        bi[item_indices_update] += dmse_dbi
-        H[user_indices_update, :] += dmse_dh
-        W[:, item_indices_update] += dmse_dw
+        bu[user_indices[i:i + batch_size]] += dmse_dbu
+        bi[item_indices[i:i + batch_size]] += dmse_dbi
+        H[user_indices[i:i + batch_size], :] += dmse_dh
+        W[:, item_indices[i:i + batch_size]] += dmse_dw
 
 
 @njit(parallel=True)
@@ -102,21 +93,7 @@ def _train_batch(user_indices: np.ndarray,
     dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
     dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
 
-    # Group and reduce updates
-    user_indices_reduced = list(set(user_indices))
-    item_indices_reduced = list(set(item_indices))
-
-    dmse_dbu_reduced = reduce_grad_change(dmse_dbu, user_indices, user_indices_reduced)
-    dmse_dbi_reduced = reduce_grad_change(dmse_dbi, item_indices, item_indices_reduced)
-    dmse_dh_reduced = reduce_grad_change(dmse_dh, user_indices, user_indices_reduced)
-    dmse_dw_reduced = reduce_grad_change(dmse_dw.T, item_indices, item_indices_reduced).T
-    assert len(dmse_dbu_reduced) == len(user_indices_reduced)
-    assert len(dmse_dbi_reduced) == len(item_indices_reduced)
-    assert len(dmse_dh_reduced) == len(user_indices_reduced)
-    assert dmse_dw_reduced.shape[-1] == len(item_indices_reduced)
-
-    return dmse_dbu_reduced, dmse_dbi_reduced, dmse_dh_reduced, dmse_dw_reduced, user_indices_reduced, \
-           item_indices_reduced
+    return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
 
 
 @njit(parallel=True)
@@ -133,25 +110,14 @@ def _predict_ratings(mu: np.float32,
                      user_indices: np.ndarray,
                      item_indices: np.ndarray):
     # Perform a point-wise dot product
-    print("Making prediction ---------")
-    print("mu + bu + bi = ", mu + bu[user_indices] + bi[item_indices])
-    print("Max, min = ", np.max(mu + bu[user_indices] + bi[item_indices]),
-          np.min(mu + bu[user_indices] + bi[item_indices]))
-    print("H . W = ", np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1))
-    print("Max, min = ", np.max(np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)),
-          np.min(np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)))
-    pred = mu + bu[user_indices] + bi[item_indices] + np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)
-    print("prediction = ", pred)
-    print("Max, min = ", np.max(pred), np.min(pred))
-    print("Pred shape", pred.shape)
-
     return mu + bu[user_indices] + bi[item_indices] + np.sum(H[user_indices, :] * W[:, item_indices].T, axis=1)
 
 
 class MatrixFactoriser(ModelBase):
     def __init__(self):
         super().__init__()
-        self.H = self.W = self.R = self.user_map = self.item_map = None
+        self.H = self.W = self.R = self.user_map = self.item_map = self.mu = self.bu = self.bi = \
+            self.k = self.hw_init_stddev = None
 
     def initialise(self, k: int, hw_init_stddev: float):
         self.k = k
@@ -177,6 +143,12 @@ class MatrixFactoriser(ModelBase):
         self.mu = np.mean(self.R.users_ratings[:, -1], dtype=np.float32)
         self.bu = np.zeros(self.R.num_users(), dtype=np.float32)
         self.bi = np.zeros(self.R.num_items(), dtype=np.float32)
+
+        # Add 0 rows for unknown items or users
+        self.H = np.append(self.H, np.full((1, self.k), 0), axis=0)
+        self.W = np.append(self.W, np.full((self.k, 1), 0), axis=1)
+        self.bu = np.append(self.bu, 0)
+        self.bi = np.append(self.bi, 0)
 
     def train(self,
               train_dataset: TrainDataset,
@@ -238,23 +210,22 @@ class MatrixFactoriser(ModelBase):
             return self.eval(eval_dataset)
 
     def predict(self, dataset: TestDataset) -> np.ndarray:
-        def _pred(user_id, item_id):
-            if user_id in self.user_map:
-                user_index = self.user_map[user_id]
-                if item_id in self.item_map:
-                    item_index = self.item_map[item_id]
-                    return self.H[user_index, :].dot(self.W[:, item_index])
-                else:
-                    # TODO add some case for a new item (cold start)
-                    return 3.0
-            else:
-                # TODO add some case for a new user (cold start)
-                return 3.0
 
-        return np.asarray(
-            [_pred(user_id, item_id) for user_id, item_id in dataset.dataset[["user id", "item id"]].to_numpy()],
-            dtype=np.float32
-        )
+        # Convert user/item ids into indices
+        def id_to_index(_id, index_map):
+            if _id in index_map:
+                return index_map[_id]
+
+            return len(index_map)
+
+        user_item_data = np.asarray([
+            [id_to_index(np.int32(row[0]), self.R.user_map), id_to_index(np.int32(row[1]), self.R.item_map)]
+            for row in dataset.dataset[["user id", "item id"]].to_numpy()
+        ])
+        user_indices = user_item_data[:, 0]
+        item_indices = user_item_data[:, 1]
+
+        return _predict_ratings(self.mu, self.bu, self.bi, self.H, self.W, user_indices, item_indices)
 
     def save(self, checkpoint_file):
         user_map_np = np.array(list(self.user_map.items()), dtype="i4,i4")
