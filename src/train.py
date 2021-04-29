@@ -38,8 +38,8 @@ def custom_trainable(config, data, checkpoint_dir=None):
             eval_dataset=eval_dataset,
             lr=config["lr"],
             batch_size=config["batch_size"],
-            user_bias_reg=config["user_reg"],
-            item_bias_reg=config["item_reg"],
+            user_bias_reg=config["user_bias_reg"],
+            item_bias_reg=config["item_bias_reg"],
             user_reg=config["user_reg"],
             item_reg=config["item_reg"],
         )
