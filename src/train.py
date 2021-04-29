@@ -38,6 +38,8 @@ def custom_trainable(config, data, checkpoint_dir=None):
             eval_dataset=eval_dataset,
             lr=config["lr"],
             batch_size=config["batch_size"],
+            user_bias_reg=config["user_bias_reg"],
+            item_bias_reg=config["item_bias_reg"],
             user_reg=config["user_reg"],
             item_reg=config["item_reg"],
         )
@@ -105,17 +107,19 @@ def start_training(train_dataset, evaluation_dataset):
             "k": tune.choice([8, 16, 32, 64]),
             "hw_init_stddev": tune.uniform(0, 0.3),
             "user_reg": tune.uniform(0, 0.3),
+            "item_bias_reg": tune.uniform(0, 0.3),
+            "user_bias_reg": tune.uniform(0, 0.3),
             "item_reg": tune.uniform(0, 0.3),
             "batch_size": tune.choice([16384, 32768, 65536]),
             "lr": tune.loguniform(0.001, 0.01)
         },
         resources_per_trial={
-         "cpu": 14
+         "cpu": 7
         },
         verbose=3,
         # scheduler=bohb_hyperband,
         # search_alg=bohb_search,
         keep_checkpoints_num=20,
-        num_samples=50,
+        num_samples=10,
         time_budget_s=int(3600*23.9)
     )
