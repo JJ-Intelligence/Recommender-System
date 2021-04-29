@@ -56,7 +56,7 @@ def custom_trainable(config, data, checkpoint_dir=None):
 
 
 TRAINING_ITERATIONS = 200
-CHECKPOINT_FREQ = 10  # How frequently to save checkpoints
+CHECKPOINT_FREQ = 100  # How frequently to save checkpoints
 
 
 def start_training(train_dataset, evaluation_dataset):
@@ -104,14 +104,14 @@ def start_training(train_dataset, evaluation_dataset):
         local_dir="results/",
         config={
             "model_type": "matrix_fact",
-            "k": tune.choice([8, 16, 32, 64]),
-            "hw_init_stddev": tune.uniform(0, 0.3),
-            "user_reg": tune.uniform(0, 0.3),
-            "item_bias_reg": tune.uniform(0, 0.3),
-            "user_bias_reg": tune.uniform(0, 0.3),
-            "item_reg": tune.uniform(0, 0.3),
-            "batch_size": tune.choice([16384, 32768, 65536]),
-            "lr": tune.loguniform(0.001, 0.01)
+            "k": tune.choice([32, 64]),
+            "hw_init_stddev": tune.uniform(0, 0.4),
+            "user_reg": tune.uniform(0, 0.2),
+            "item_bias_reg": tune.uniform(0, 0.2),
+            "user_bias_reg": tune.uniform(0, 0.2),
+            "item_reg": tune.uniform(0, 0.2),
+            "batch_size": tune.choice([8192, 16384]),
+            "lr": tune.loguniform(0.002, 0.008)
         },
         resources_per_trial={
          "cpu": 7
