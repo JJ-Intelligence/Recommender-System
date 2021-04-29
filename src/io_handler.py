@@ -61,6 +61,11 @@ def _read_csv_to_dataframe(filename: str, columns) -> pd.DataFrame:
     return dataset
 
 
-def write_output_csv(filename: str, test_data, predictions):
-    with open(filename, 'w') as file:
-        file.write("\n".join(str(pred) for pred in predictions))
+def write_output_csv(filename: str, test_dataset: TestDataset, predictions):
+    df = pd.DataFrame({
+        "user id": test_dataset.dataset["user id"],
+        "item id": test_dataset.dataset["item id"],
+        "rating": predictions,
+        "timestamp": test_dataset.dataset["timestamp"],
+    })
+    df.to_csv(filename, header=False, index=False)
