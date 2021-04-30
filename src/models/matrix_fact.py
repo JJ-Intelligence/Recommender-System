@@ -176,7 +176,7 @@ class MatrixFactoriser(ModelBase):
                     print("MSE: ", evaluation.mse)
                     eval_history.append(evaluation)
 
-                    if evaluation.mse > bar.mse:
+                    if 0 < bar.mse < evaluation.mse:
                         lr /= 2
                         print("Decreasing lr:", lr)
                     bar.mse = evaluation.mse
