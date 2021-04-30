@@ -74,7 +74,7 @@ def main():
             item_bias_reg=0.046243201501061273,
         )
 
-        model.save("model.npz")
+        # model.save("model.npz")
 
         print("Run on test set")
         evaluation = model.eval(test_dataset)
