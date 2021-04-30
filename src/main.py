@@ -61,17 +61,17 @@ def main():
 
         print("Starting training")
         model = MatrixFactoriser()
-        model.initialise(k=64, hw_init_stddev=0.16074)
+        model.initialise(k=32, hw_init_stddev=0.014676120289293371)
         model.train(
             train_dataset=train_dataset,
             eval_dataset=evaluation_dataset,
-            epochs=130,
-            batch_size=32_768,
-            lr=0.0028122,
-            user_reg=0.16074,
-            item_reg=0.084426,
-            user_bias_reg=0.1,
-            item_bias_reg=0.1,
+            epochs=150,
+            batch_size=16_384,
+            lr=0.0068726720195871754,
+            user_reg=0.0676216799448991,
+            item_reg=0.06639363622316222,
+            user_bias_reg=0.12389941928866091,
+            item_bias_reg=0.046243201501061273,
         )
 
         model.save("model.npz")
