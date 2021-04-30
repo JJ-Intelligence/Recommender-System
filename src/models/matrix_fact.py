@@ -167,14 +167,18 @@ class MatrixFactoriser(ModelBase):
         self.setup_model(train_dataset)
         eval_history = []
         # Training epochs
-        with EpochBar('Training Step', max=epochs) as bar:
+        with EpochBar('Training Step', max=epochs, check_tty=False) as bar:
             for epoch in range(epochs):
                 print("Starting epoch", epoch)
                 evaluation = self.train_step(train_dataset, eval_dataset, lr, batch_size, user_bias_reg, item_bias_reg,
                                              user_reg, item_reg)
-                print("MSE: ", evaluation.mse)
                 if eval_dataset is not None:
+                    print("MSE: ", evaluation.mse)
                     eval_history.append(evaluation)
+
+                    if evaluation.mse > bar.mse:
+                        lr /= 2
+                        print("Decreasing lr:", lr)
                     bar.mse = evaluation.mse
 
                 bar.next()

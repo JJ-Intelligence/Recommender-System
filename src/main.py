@@ -57,16 +57,16 @@ def main():
     elif args.run_option == "run":
 
         print("Reading training CSV")
-        train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
+        train_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1)
 
         print("Starting training")
         model = MatrixFactoriser()
         model.initialise(k=32, hw_init_stddev=0.014676120289293371)
         model.train(
             train_dataset=train_dataset,
-            eval_dataset=evaluation_dataset,
-            epochs=130,
-            batch_size=16384,
+            # eval_dataset=evaluation_dataset,
+            epochs=50,
+            batch_size=16_384,
             lr=0.0068726720195871754,
             user_reg=0.0676216799448991,
             item_reg=0.06639363622316222,
@@ -74,11 +74,11 @@ def main():
             item_bias_reg=0.046243201501061273,
         )
 
-        model.save("model.npz")
+        # model.save("model.npz")
 
         print("Run on test set")
-        evaluation = model.eval(evaluation_dataset)
-        print(evaluation)
+        # evaluation = model.eval(evaluation_dataset)
+        # print(evaluation)
 
         print("Reading prediction dataset")
         predict_dataset = read_test_csv(args.testfile)
