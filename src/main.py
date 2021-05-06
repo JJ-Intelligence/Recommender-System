@@ -50,34 +50,31 @@ def main():
         predictions = model.predict(predict_dataset)
 
         print("Writing prediction output")
-        write_output_csv(args.outputfile, predictions)
+        write_output_csv(args.outputfile, predict_dataset, predictions)
 
     elif args.run_option == "run":
         model_name = args.run_model.lower()
 
         print("Reading training CSV")
-        train_dataset, evaluation_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0.1)
+        train_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0)
 
-        print("Building model", args.run_model)
+        print("Starting training")
         if model_name == 'matrixfact':
             model = MatrixFactoriser()
-            model.initialise(k=10, hw_init_stddev=0.1)
-
-            print("Starting training")
+            model.initialise(k=32, hw_init_stddev=0.014676120289293371)
             model.train(
                 train_dataset=train_dataset,
-                eval_dataset=evaluation_dataset,
-                epochs=20,
-                lr=0.01,
-                user_bias_reg=0.01,
-                item_bias_reg=0.01,
-                user_reg=0.01,
-                item_reg=0.01,
-                batch_size=100_000,
+                eval_dataset=test_dataset,
+                epochs=70,
+                batch_size=16_384,
+                lr=0.0068726720195871754,
+                user_reg=0.0676216799448991,
+                item_reg=0.06639363622316222,
+                user_bias_reg=0.12389941928866091,
+                item_bias_reg=0.046243201501061273,
             )
 
-            print("Saving model")
-            model.save("model.npz")
+        # model.save("model.npz")
 
         elif model_name == 'average':
             model = RandomModel(is_normal=False)
@@ -85,7 +82,7 @@ def main():
             print("Starting training")
             model.train(
                 train_dataset=train_dataset,
-                eval_dataset=evaluation_dataset,
+                eval_dataset=test_dataset,
             )
 
         elif model_name == 'random':
@@ -94,7 +91,7 @@ def main():
             print("Starting training")
             model.train(
                 train_dataset=train_dataset,
-                eval_dataset=evaluation_dataset,
+                eval_dataset=test_dataset,
             )
 
         elif model_name == 'baseline':
@@ -116,7 +113,7 @@ def main():
         predictions = model.predict(predict_dataset)
 
         print("Writing prediction output")
-        write_output_csv(args.outputfile, predictions)
+        write_output_csv(args.outputfile, predict_dataset, predictions)
 
     elif args.run_option == "load":
         print("Loading model from:", args.checkpointfile)
@@ -135,7 +132,7 @@ def main():
         predictions = model.predict(predict_dataset)
 
         print("Writing prediction output")
-        write_output_csv(args.outputfile, predictions)
+        write_output_csv(args.outputfile, predict_dataset, predictions)
 
 
 if __name__ == "__main__":

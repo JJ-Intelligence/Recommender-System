@@ -37,11 +37,8 @@ class DictMatrix:
         return {val: index for index, val in enumerate(series.unique())}
 
 
-def do_train_step(user_indices: np.ndarray,
-                  item_indices: np.ndarray,
-                  ratings: np.ndarray,
-                  user_indices_inv_counts: np.ndarray,
-                  item_indices_inv_counts: np.ndarray,
+@njit
+def do_train_step(users_ratings: np.ndarray,
                   mu: np.float32,
                   bu: np.ndarray,
                   bi: np.ndarray,
@@ -54,35 +51,31 @@ def do_train_step(user_indices: np.ndarray,
                   reg_H: float,
                   reg_W: float):
     """ Perform a single training step (1 epoch) """
-    for i in range(0, len(ratings), batch_size):
-        batch_slice = np.s_[i:i + batch_size]
+    np.random.shuffle(users_ratings)
+
+    user_indices = users_ratings[:, 0].astype(np.int32)
+    item_indices = users_ratings[:, 1].astype(np.int32)
+    ratings = users_ratings[:, 2].astype(np.float32)
+
+    for i in range(0, len(users_ratings), batch_size):
         dmse_dbu, dmse_dbi, dmse_dh, dmse_dw = _train_batch(
-            user_indices[batch_slice],
-            item_indices[batch_slice],
-            ratings[batch_slice],
-            user_indices_inv_counts[batch_slice],
-            item_indices_inv_counts[batch_slice],
-            mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W)
+            user_indices[i:i + batch_size],
+            item_indices[i:i + batch_size],
+            ratings[i:i + batch_size],
+            mu, bu, bi, H, W, lr, reg_bu, reg_bi, reg_H, reg_W
+        )
 
         # Update weights, using loss gradient changes
-        np.add.at(bu, user_indices[i:i + batch_size], dmse_dbu)
-        np.add.at(bi, item_indices[i:i + batch_size], dmse_dbi)
-        np.add.at(H, np.s_[user_indices[i:i + batch_size], :], dmse_dh)
-        np.add.at(W, np.s_[:, item_indices[i:i + batch_size]], dmse_dw)
-
-
-def indices_to_inv_counts(indices):
-    # Map indices to an array of 1/<index_count>
-    _, inv, counts = np.unique(indices, return_inverse=True, return_counts=True)
-    return np.asarray([1/counts[i] for i in inv])
+        bu[user_indices[i:i + batch_size]] += dmse_dbu
+        bi[item_indices[i:i + batch_size]] += dmse_dbi
+        H[user_indices[i:i + batch_size], :] += dmse_dh
+        W[:, item_indices[i:i + batch_size]] += dmse_dw
 
 
 @njit(parallel=True)
 def _train_batch(user_indices: np.ndarray,
                  item_indices: np.ndarray,
                  ratings: np.ndarray,
-                 user_inv_counts: np.ndarray,
-                 item_inv_counts: np.ndarray,
                  mu: np.float32,
                  bu: np.ndarray,
                  bi: np.ndarray,
@@ -94,14 +87,20 @@ def _train_batch(user_indices: np.ndarray,
                  reg_H: float,
                  reg_W: float):
     predictions = _predict_ratings(mu, bu, bi, H, W, user_indices, item_indices)
-    residuals = ratings - predictions
+    residuals = 2 * (ratings - predictions)
 
     # Gradient changes
-    dmse_dbu = lr * ((residuals * user_inv_counts) - (reg_bu * bu[user_indices]))
-    dmse_dbi = lr * ((residuals * item_inv_counts) - (reg_bi * bi[item_indices]))
-    dmse_dh = lr * ((user_inv_counts * residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
-    dmse_dw = lr * ((item_inv_counts * residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
+    dmse_dbu = lr * (residuals - (reg_bu * bu[user_indices]))
+    dmse_dbi = lr * (residuals - (reg_bi * bi[item_indices]))
+    dmse_dh = lr * ((residuals * W[:, item_indices]).T - (reg_H * H[user_indices, :]))
+    dmse_dw = lr * ((residuals * H[user_indices, :].T) - (reg_W * W[:, item_indices]))
+
     return dmse_dbu, dmse_dbi, dmse_dh, dmse_dw
+
+
+@njit(parallel=True)
+def reduce_grad_change(grad_change, indices, indices_reduced):
+    return np.asarray([grad_change[indices == i].sum(axis=0) for i in indices_reduced])
 
 
 @njit(parallel=True)
@@ -119,8 +118,8 @@ def _predict_ratings(mu: np.float32,
 class MatrixFactoriser(ModelBase):
     def __init__(self):
         super().__init__()
-        self.k = self.hw_init_stddev = self.mu = self.bu = self.bi = self.H = self.W = self.R = self.user_map = \
-            self.item_map = None
+        self.H = self.W = self.R = self.user_map = self.item_map = self.mu = self.bu = self.bi = \
+            self.k = self.hw_init_stddev = None
 
     def initialise(self, k: int, hw_init_stddev: float):
         self.k = k
@@ -168,12 +167,18 @@ class MatrixFactoriser(ModelBase):
         self.setup_model(train_dataset)
         eval_history = []
         # Training epochs
-        with EpochBar('Training Step', max=epochs) as bar:
+        with EpochBar('Training Step', max=epochs, check_tty=False) as bar:
             for epoch in range(epochs):
+                print("Starting epoch", epoch)
                 evaluation = self.train_step(train_dataset, eval_dataset, lr, batch_size, user_bias_reg, item_bias_reg,
                                              user_reg, item_reg)
                 if eval_dataset is not None:
+                    print("MSE: ", evaluation.mse)
                     eval_history.append(evaluation)
+
+                    if 0 < bar.mse < evaluation.mse:
+                        lr /= 2
+                        print("Decreasing lr:", lr)
                     bar.mse = evaluation.mse
 
                 bar.next()
@@ -193,18 +198,8 @@ class MatrixFactoriser(ModelBase):
         if self.R is None:
             self.setup_model(train_dataset)
 
-        user_indices = self.R.users_ratings[:, 0].astype(np.int32)
-        item_indices = self.R.users_ratings[:, 1].astype(np.int32)
-        ratings = self.R.users_ratings[:, 2].astype(np.float32)
-        user_indices_inv_counts = indices_to_inv_counts(user_indices)
-        item_indices_inv_counts = indices_to_inv_counts(item_indices)
-
         do_train_step(
-            user_indices,
-            item_indices,
-            ratings,
-            user_indices_inv_counts,
-            item_indices_inv_counts,
+            self.R.users_ratings,
             self.mu,
             self.bu,
             self.bi,
@@ -215,7 +210,7 @@ class MatrixFactoriser(ModelBase):
             user_bias_reg,
             item_bias_reg,
             user_reg,
-            item_reg,
+            item_reg
         )
 
         # Evaluate at the end of the epoch
