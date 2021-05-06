@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--testfile', type=str, help='File containing the test data')
     parser.add_argument('--outputfile', type=str, help='File to output predictions')
     parser.add_argument('--checkpointfile', type=str, help='Checkpoint file to load')
-    parser.add_argument('--run_model', type=str,
+    parser.add_argument('--model', type=str,
                         help='Model to use when \'run_option\' is \'run\' (MatrixFact/Random/Baseline)', default=None)
     args = parser.parse_args()
 
@@ -53,7 +53,11 @@ def main():
         write_output_csv(args.outputfile, predict_dataset, predictions)
 
     elif args.run_option == "run":
-        model_name = args.run_model.lower()
+        if args.model is None:
+            # Default to matrix fact
+            model_name = "matrixfact"
+        else:
+            model_name = args.model.lower()
 
         print("Reading training CSV")
         train_dataset, test_dataset = read_train_csv(args.trainfile, test_size=0.1, eval_size=0)
