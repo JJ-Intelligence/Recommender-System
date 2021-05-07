@@ -145,13 +145,17 @@ def main():
     elif args.run_option == "evaluate":
         models = [
             (
+                # Our model
                 MatrixFactoriser,
                 {"k": 32, "hw_init_stddev": 0.014676120289293371},
                 {"epochs": 70, "batch_size": 16_384, "lr": 0.0068726720195871754, "user_reg": 0.0676216799448991,
                  "item_reg": 0.06639363622316222, "user_bias_reg": 0.12389941928866091,
                  "item_bias_reg": 0.046243201501061273},
             ), (
-                RandomModel, {}, {},
+                # Random model with a normal distribution
+                RandomModel, {"is_normal": True}, {},
+            ), (
+
             )
         ]
 

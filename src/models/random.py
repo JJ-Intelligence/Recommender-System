@@ -7,13 +7,12 @@ from models import ModelBase
 class RandomModel(ModelBase):
     """ Predicts random ratings, modeling ratings using a normal distribution, or just using the average """
 
-    def __init__(self, is_normal: bool):
+    def __init__(self):
         super().__init__()
-        self.is_normal = is_normal
-        self.rating_mean = self.rating_std = None
+        self.is_normal = self.rating_mean = self.rating_std = None
 
-    def initialise(self, *args, **kwargs):
-        pass
+    def initialise(self, is_normal: bool, *args, **kwargs):
+        self.is_normal = is_normal
 
     def setup_model(self, dataset: TrainDataset):
         ratings = dataset.dataset["user rating"].to_numpy()
@@ -29,7 +28,7 @@ class RandomModel(ModelBase):
         if eval_dataset is not None:
             return self.eval(eval_dataset)
 
-    def train(self, train_dataset: TrainDataset, eval_dataset: EvaluationDataset = None):
+    def train(self, train_dataset: TrainDataset, eval_dataset: EvaluationDataset = None, *args, **kwargs):
         """ Note that `epochs` and `lr` have no effect on this model """
         return self.train_step(train_dataset, eval_dataset)
 
