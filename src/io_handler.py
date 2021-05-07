@@ -29,10 +29,12 @@ def read_train_csv(filename: str, test_size=0.1, eval_size=0) -> (TrainDataset, 
             TrainDataset(x_train, y_train), \
             EvaluationDataset(x_evaluation, y_evaluation), \
             EvaluationDataset(x_test, y_test)
-    else:
+    elif test_size > 0:
         return \
             TrainDataset(x_train, y_train), \
-            EvaluationDataset(x_evaluation, y_evaluation), \
+            EvaluationDataset(x_evaluation, y_evaluation)
+    else:
+        return TrainDataset(x_train, y_train)
 
 
 def read_test_csv(filename: str) -> TestDataset:
