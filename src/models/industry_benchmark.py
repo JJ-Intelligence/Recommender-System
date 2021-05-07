@@ -1,12 +1,12 @@
 """This model is built using Surprise, and is purely for benchmark purposes"""
 import numpy as np
-from surprise import Reader, Dataset, BaselineOnly
+from surprise import Reader, Dataset, KNNBasic, SVD, NormalPredictor, SlopeOne
 
 from data import TrainDataset, TestDataset, EvaluationDataset
 from models.model_base import ModelBase
 
 
-class IndustryBaselineModel(ModelBase):
+class KNNBenchmark(ModelBase):
     def __init__(self):
         super().__init__()
         self.model = None
@@ -21,7 +21,7 @@ class IndustryBaselineModel(ModelBase):
         reader = Reader(rating_scale=(0.5, 5))
         data = Dataset.load_from_df(_dataset.dataset[['user id', 'item id', 'user rating']], reader)
         trainset = data.build_full_trainset()
-        self.model = BaselineOnly()
+        self.model = SlopeOne()
         self.model.fit(trainset)
 
     def predict(self, dataset: TestDataset) -> np.ndarray:

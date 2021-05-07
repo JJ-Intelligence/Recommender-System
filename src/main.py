@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from models import MatrixFactoriser, RandomModel, IndustryBaselineModel
+from models import MatrixFactoriser, RandomModel, KNNBenchmark
 from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
@@ -80,15 +80,6 @@ def main():
 
         # model.save("model.npz")
 
-        elif model_name == 'average':
-            model = RandomModel(is_normal=False)
-
-            print("Starting training")
-            model.train(
-                train_dataset=train_dataset,
-                eval_dataset=test_dataset,
-            )
-
         elif model_name == 'random':
             model = RandomModel(is_normal=True)
 
@@ -98,9 +89,9 @@ def main():
                 eval_dataset=test_dataset,
             )
 
-        elif model_name == 'baseline':
+        elif model_name == 'knn':
             print("Training baseline model")
-            model = IndustryBaselineModel()
+            model = KNNBenchmark()
             model.initialise()
             model.train(train_dataset)
         else:
