@@ -85,7 +85,8 @@ def main():
         # model.save("model.npz")
 
         elif model_name == 'average':
-            model = RandomModel(is_normal=False)
+            model = RandomModel()
+            model.initialise(is_normal=False)
 
             print("Starting training")
             model.train(
@@ -94,7 +95,8 @@ def main():
             )
 
         elif model_name == 'random':
-            model = RandomModel(is_normal=True)
+            model = RandomModel()
+            model.initialise(is_normal=True)
 
             print("Starting training")
             model.train(

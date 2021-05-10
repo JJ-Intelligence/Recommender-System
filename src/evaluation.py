@@ -16,7 +16,7 @@ class Evaluation:
 
 def to_cross_validation_datasets(dataset: TrainDataset,
                                  n_splits: int,
-                                 seed: int) -> Generator[Tuple[TrainDataset, EvaluationDataset]]:
+                                 seed: int) -> Generator[Tuple[TrainDataset, EvaluationDataset], None, None]:
     """ Convert a dataset into a list of cross-validation datasets """
     cv = KFold(n_splits=n_splits, shuffle=True, random_state=seed)
     splits = cv.split(dataset.X, dataset.y)
