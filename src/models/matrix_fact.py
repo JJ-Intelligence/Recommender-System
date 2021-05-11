@@ -175,11 +175,15 @@ class MatrixFactoriser(ModelBase):
                 if eval_dataset is not None:
                     print("MSE: ", evaluation.mse)
                     eval_history.append(evaluation)
-
-                    if 0 < bar.mse < evaluation.mse:
-                        lr /= 2
-                        print("Decreasing lr:", lr)
+                    # if 0 < bar.mse < evaluation.mse:
+                    #     lr /= 2
+                    #     print("Decreasing lr at epoch", epoch, ":", lr)
                     bar.mse = evaluation.mse
+
+                # LR exponential decay after 20 epochs
+                if epoch > 20:
+                    lr *= np.exp(-0.1)
+                    print("Decreasing lr on epoch %d to %f" % (epoch, lr))
 
                 bar.next()
 

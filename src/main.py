@@ -164,18 +164,18 @@ def main():
         ]
 
         print("Loading dataset")
-        dataset = read_train_csv(args.trainfile, test_size=0., eval_size=0.)
+        train_dataset = read_train_csv(args.trainfile, test_size=0., eval_size=0.)
 
         results = []
         for cv_num, (train_dataset, test_dataset) in enumerate(
-                to_cross_validation_datasets(dataset, n_splits=5, seed=1)):
+                to_cross_validation_datasets(train_dataset, n_splits=5, seed=1)):
 
             for model_cls, init_kwargs, train_kwargs in models:
                 # Run model on CV fold
                 print("Evaluating '%s' on CV fold %d" % (model_cls.__name__, cv_num))
                 model = model_cls()
                 model.initialise(**init_kwargs)
-                model.train(train_dataset, **train_kwargs)
+                model.train(train_dataset, eval_dataset=eval_dataset, **train_kwargs)
                 evaluation = model.eval(test_dataset)
                 print("> Results:\n", evaluation)
 
