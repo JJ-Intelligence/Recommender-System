@@ -8,7 +8,11 @@ from data import TrainDataset, EvaluationDataset
 
 @dataclass
 class Evaluation:
+    mae: float
     mse: float
+    rmse: float
+    accuracy: float
+    f1: float
 
     def __str__(self):
         return "\n> ".join(f"{k}: {v}" for k, v in self.__dict__.items())

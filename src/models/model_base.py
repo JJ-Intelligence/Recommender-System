@@ -72,6 +72,12 @@ class ModelBase(ABC):
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
         test_dataset, y_true = evaluation_dataset.to_test_dataset()
         y_preds = self.predict(test_dataset)
+        y_preds_rounded = np.round(2 * y_preds) / 2  # Predictions rounded to nearest 0.5
+
         return Evaluation(
+            mae=metrics.mean_absolute_error(y_true, y_preds),
             mse=metrics.mean_squared_error(y_true, y_preds),
+            rmse=metrics.mean_squared_error(y_true, y_preds, squared=False),
+            accuracy=metrics.balanced_accuracy_score(y_true, y_preds_rounded),
+            f1=metrics.f1_score(y_true, y_preds_rounded, average="weighted"),
         )
