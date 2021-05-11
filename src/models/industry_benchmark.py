@@ -1,6 +1,6 @@
 """This model is built using Surprise, and is purely for benchmark purposes"""
 import numpy as np
-from surprise import Reader, Dataset, KNNBasic, SVD, NormalPredictor, SlopeOne
+from surprise import Reader, Dataset, KNNBasic, SVD, NormalPredictor, SlopeOne, NMF, PredictionImpossible
 
 from data import TrainDataset, TestDataset, EvaluationDataset
 from models.model_base import ModelBase
@@ -21,11 +21,19 @@ class KNNBenchmark(ModelBase):
         reader = Reader(rating_scale=(0.5, 5))
         data = Dataset.load_from_df(_dataset.dataset[['user id', 'item id', 'user rating']], reader)
         trainset = data.build_full_trainset()
-        self.model = SlopeOne()
+        self.model = KNNBasic(verbose=True, k=40, sim_options={'name': 'cosine', 'user_based': False})
         self.model.fit(trainset)
+        ratings = _dataset.dataset["user rating"].to_numpy()
+        self.rating_mean = np.mean(ratings)
 
     def predict(self, dataset: TestDataset) -> np.ndarray:
-        return np.array([self.model.estimate(int(u), int(i)) for u, i, t in dataset.dataset.to_numpy()])
+        r = []
+        for u, i, t in dataset.dataset.to_numpy():
+            try:
+                r.append(self.model.estimate(int(u), int(i))[0])
+            except PredictionImpossible:
+                r.append(self.rating_mean)  # Global avg for cold start
+        return np.array(r)
 
     def save(self, checkpoint_dir):
         pass
