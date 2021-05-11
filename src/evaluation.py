@@ -1,4 +1,4 @@
-from typing import Generator, Tuple
+from typing import Generator, Tuple, Optional
 from dataclasses import dataclass
 
 from sklearn.model_selection import KFold
@@ -13,6 +13,7 @@ class Evaluation:
     rmse: float
     accuracy: float  # Balanced accuracy with rounded predictions
     f1: float  # Weighted f1 score with rounded predictions
+    train_time: Optional[float] = 0
     # roc_auc: float
 
     def __str__(self):

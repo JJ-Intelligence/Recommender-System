@@ -69,7 +69,7 @@ class ModelBase(ABC):
         self.load(checkpoint_dir)
         self.initialised = True
 
-    def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
+    def eval(self, evaluation_dataset: EvaluationDataset, **kwargs) -> Evaluation:
         test_dataset, y_true = evaluation_dataset.to_test_dataset()
         y_preds = self.predict(test_dataset)
         y_true_labels = (y_true * 10).astype(int)
@@ -81,5 +81,6 @@ class ModelBase(ABC):
             rmse=metrics.mean_squared_error(y_true, y_preds, squared=False),
             accuracy=metrics.balanced_accuracy_score(y_true_labels, y_preds_labels),
             f1=metrics.f1_score(y_true_labels, y_preds_labels, average="weighted"),
+            **kwargs
             # roc_auc=metrics.roc_auc_score(y_true_labels, y_preds_labels, average="weighted", multi_class="ovo")
         )

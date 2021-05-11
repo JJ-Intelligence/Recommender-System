@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 import numpy as np
 import pandas as pd
@@ -197,8 +198,10 @@ def main():
                 print("Evaluating '%s' on CV fold %d" % (name, cv_num))
                 model = model_cls()
                 model.initialise(**init_kwargs)
+                start_time = time.time()
                 model.train(train_dataset, **train_kwargs)
-                evaluation = model.eval(test_dataset)
+                end_time = time.time()
+                evaluation = model.eval(test_dataset, train_time=end_time - start_time)
                 print("> Results:\n", evaluation)
 
                 # Update results
