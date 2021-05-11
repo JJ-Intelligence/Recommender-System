@@ -16,7 +16,7 @@ class Evaluation:
     # roc_auc: float
 
     def __str__(self):
-        return "\n> ".join(f"{k}: {v}" for k, v in self.__dict__.items())
+        return "> " + "\n> ".join(f"{k}: {v}" for k, v in self.__dict__.items())
 
 
 def to_cross_validation_datasets(dataset: TrainDataset,
