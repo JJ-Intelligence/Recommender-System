@@ -5,7 +5,7 @@ from collections import defaultdict
 import pandas as pd
 
 from evaluation import to_cross_validation_datasets
-from models import MatrixFactoriser, RandomModel, IndustryBaselineModel, KNNModel
+from models import MatrixFactoriser, RandomModel, KNNBenchmark, KNNModel
 from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
@@ -104,12 +104,12 @@ def main():
                 eval_dataset=test_dataset,
             )
 
-        elif model_name == 'baseline':
+        elif model_name == 'knn':
             print("Training baseline model")
-            model = IndustryBaselineModel()
+            model = KNNBenchmark()
             model.initialise()
             model.train(train_dataset)
-        elif model_name == 'knn':
+        elif model_name == 'custom knn':
             print("Training KNN model")
             model = KNNModel()
             model.train(train_dataset)
