@@ -11,8 +11,9 @@ class KNNBenchmark(ModelBase):
         super().__init__()
         self.model = None
 
-    def initialise(self, knn_class, *args, **kwargs):
+    def initialise(self, knn_class, k=40, *args, **kwargs):
         self.knn_class = knn_class
+        self.k = k
 
     def train_step(self, dataset: TrainDataset, eval_dataset: EvaluationDataset, *args, **kwargs):
         pass
@@ -25,7 +26,7 @@ class KNNBenchmark(ModelBase):
             "KNNBasic": KNNBasic,
             "KNNBaseline": KNNBaseline
         }[self.knn_class]
-        self.model = model(verbose=True, k=40, sim_options={'name': 'cosine', 'user_based': False})
+        self.model = model(verbose=True, sim_options={'name': 'cosine', 'user_based': False}, k=self.k)
         self.model.fit(trainset)
         ratings = _dataset.dataset["user rating"].to_numpy()
         self.rating_mean = np.mean(ratings)
