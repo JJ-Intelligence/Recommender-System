@@ -1,6 +1,6 @@
 """This model is built using Surprise, and is purely for benchmark purposes"""
 import numpy as np
-from surprise import Reader, Dataset, KNNBasic, SVD, NormalPredictor, SlopeOne, NMF, PredictionImpossible, KNNBaseline
+from surprise import Reader, Dataset, KNNBasic, SVD, NormalPredictor, SlopeOne, NMF, PredictionImpossible, KNNBaseline, KNNWithMeans
 
 from data import TrainDataset, TestDataset, EvaluationDataset
 from models.model_base import ModelBase
@@ -11,8 +11,8 @@ class KNNBenchmark(ModelBase):
         super().__init__()
         self.model = None
 
-    def initialise(self, *args, **kwargs):
-        pass
+    def initialise(self, knn_class, *args, **kwargs):
+        self.knn_class = knn_class
 
     def train_step(self, dataset: TrainDataset, eval_dataset: EvaluationDataset, *args, **kwargs):
         pass
@@ -21,7 +21,11 @@ class KNNBenchmark(ModelBase):
         reader = Reader(rating_scale=(0.5, 5))
         data = Dataset.load_from_df(_dataset.dataset[['user id', 'item id', 'user rating']], reader)
         trainset = data.build_full_trainset()
-        self.model = KNNBaseline(verbose=True, k=40, sim_options={'name': 'cosine', 'user_based': False})
+        model = {
+            "KNNBasic": KNNBasic,
+            "KNNBaseline": KNNBaseline
+        }[self.knn_class]
+        self.model = model(verbose=True, k=40, sim_options={'name': 'cosine', 'user_based': False})
         self.model.fit(trainset)
         ratings = _dataset.dataset["user rating"].to_numpy()
         self.rating_mean = np.mean(ratings)
