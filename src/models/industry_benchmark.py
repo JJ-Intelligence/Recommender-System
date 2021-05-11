@@ -11,7 +11,7 @@ class KNNBenchmark(ModelBase):
         super().__init__()
         self.model = None
 
-    def initialise(self, knn_class, k=40, *args, **kwargs):
+    def initialise(self, knn_class=None, k=40, *args, **kwargs):
         self.knn_class = knn_class
         self.k = k
 
