@@ -197,7 +197,7 @@ def main():
                 print("Evaluating '%s' on CV fold %d" % (name, cv_num))
                 model = model_cls()
                 model.initialise(**init_kwargs)
-                model.train(train_dataset, eval_dataset=eval_dataset, **train_kwargs)
+                model.train(train_dataset, **train_kwargs)
                 evaluation = model.eval(test_dataset)
                 print("> Results:\n", evaluation)
 
