@@ -30,7 +30,7 @@ class KNNBenchmark(ModelBase):
         r = []
         for u, i, t in dataset.dataset.to_numpy():
             try:
-                r.append(self.model.predict(int(u), int(i)))
+                r.append(self.model.predict(int(u), int(i)).est)
             except PredictionImpossible:
                 r.append(self.rating_mean)  # Global avg for cold start
         return np.array(r)
