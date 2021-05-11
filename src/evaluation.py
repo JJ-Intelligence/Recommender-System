@@ -8,7 +8,12 @@ from data import TrainDataset, EvaluationDataset
 
 @dataclass
 class Evaluation:
+    mae: float
     mse: float
+    rmse: float
+    accuracy: float  # Balanced accuracy with rounded predictions
+    f1: float  # Weighted f1 score with rounded predictions
+    # roc_auc: float
 
     def __str__(self):
         return "\n> ".join(f"{k}: {v}" for k, v in self.__dict__.items())

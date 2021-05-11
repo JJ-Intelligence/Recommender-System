@@ -21,4 +21,4 @@ class TrainDataset:
 class EvaluationDataset(TrainDataset):
     """Data from the train file, which will be used to evaluate the performance of a model"""
     def to_test_dataset(self) -> Tuple[TestDataset, Type[ndarray]]:
-        return TestDataset(self.X), self.y.to_numpy()
+        return TestDataset(self.X), self.y["user rating"].to_numpy()

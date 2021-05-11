@@ -72,6 +72,14 @@ class ModelBase(ABC):
     def eval(self, evaluation_dataset: EvaluationDataset) -> Evaluation:
         test_dataset, y_true = evaluation_dataset.to_test_dataset()
         y_preds = self.predict(test_dataset)
+        y_true_labels = (y_true * 10).astype(int)
+        y_preds_labels = ((np.round(2 * y_preds) / 2) * 10).astype(int)  # Prediction labels
+
         return Evaluation(
+            mae=metrics.mean_absolute_error(y_true, y_preds),
             mse=metrics.mean_squared_error(y_true, y_preds),
+            rmse=metrics.mean_squared_error(y_true, y_preds, squared=False),
+            accuracy=metrics.balanced_accuracy_score(y_true_labels, y_preds_labels),
+            f1=metrics.f1_score(y_true_labels, y_preds_labels, average="weighted"),
+            # roc_auc=metrics.roc_auc_score(y_true_labels, y_preds_labels, average="weighted", multi_class="ovo")
         )

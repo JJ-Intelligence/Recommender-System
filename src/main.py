@@ -1,7 +1,7 @@
 import argparse
 import os
-from collections import defaultdict
 
+import numpy as np
 import pandas as pd
 
 from evaluation import to_cross_validation_datasets
@@ -13,7 +13,7 @@ from train import start_training
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('run_option', choices=['run', 'tune', 'load'])
+    parser.add_argument('run_option', choices=['run', 'tune', 'load', 'evaluate'])
     parser.add_argument('--trainfile', type=str, help='File containing the train data')
     parser.add_argument('--testfile', type=str, help='File containing the test data')
     parser.add_argument('--outputfile', type=str, help='File to output predictions')
@@ -160,15 +160,13 @@ def main():
             ), (
                 # Random model with a normal distribution
                 RandomModel, {"is_normal": True}, {},
-            ), (
-
             )
         ]
 
         print("Loading dataset")
         dataset = read_train_csv(args.trainfile, test_size=0., eval_size=0.)
 
-        cv_results = defaultdict(list)
+        results = []
         for cv_num, (train_dataset, test_dataset) in enumerate(
                 to_cross_validation_datasets(dataset, n_splits=5, seed=1)):
 
@@ -182,14 +180,17 @@ def main():
                 print("> Results:\n", evaluation)
 
                 # Update results
-                cv_results["CV fold"].append(cv_num)
-                cv_results["Model"].append(model_cls.__name__)
-                for k, v in evaluation.__dict__.items():
-                    cv_results[k].append(v)
+                results.append([cv_num, model_cls.__name__, *evaluation.__dict__.values()])
+
+        # Average model results
+        for model_cls, _, _ in models:
+            model_results = [r[2:] for r in results if r[1] == model_cls.__name__]
+            model_mean = np.mean(model_results, axis=0)
+            results.append(["Average", model_cls.__name__, *model_mean])
 
         # Output a CSV
-        cv_df = pd.DataFrame(cv_results)
-        print("Final evaluation results:\n", cv_df.to_markdown())
+        cv_df = pd.DataFrame(results, columns=["CV Fold", "Model", *evaluation.__dict__.keys()])
+        print("Final evaluation results:\n", cv_df.to_markdown(), sep="")
         cv_df.to_csv(args.outputfile)
 
 
