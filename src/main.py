@@ -5,7 +5,7 @@ from collections import defaultdict
 import pandas as pd
 
 from evaluation import to_cross_validation_datasets
-from models import MatrixFactoriser, RandomModel, IndustryBaselineModel
+from models import MatrixFactoriser, RandomModel, IndustryBaselineModel, KNNModel
 from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
@@ -108,6 +108,10 @@ def main():
             print("Training baseline model")
             model = IndustryBaselineModel()
             model.initialise()
+            model.train(train_dataset)
+        elif model_name == 'knn':
+            print("Training KNN model")
+            model = KNNModel()
             model.train(train_dataset)
         else:
             raise RuntimeError("Invalid argument for 'run_model'")
