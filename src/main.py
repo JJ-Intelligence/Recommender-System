@@ -7,6 +7,7 @@ import pandas as pd
 from evaluation import to_cross_validation_datasets
 from models import MatrixFactoriser, RandomModel, KNNBenchmark, KNNModel
 from io_handler import read_train_csv, read_test_csv, write_output_csv
+from models.industry_benchmark import SVDBenchmark
 from train import start_training
 
 
@@ -113,6 +114,11 @@ def main():
             print("Training KNN model")
             model = KNNModel()
             model.train(train_dataset)
+        elif model_name == 'svd':
+            print("Training baseline model")
+            model = SVDBenchmark()
+            model.initialise()
+            model.train(train_dataset)
         else:
             raise RuntimeError("Invalid argument for 'run_model'")
 
@@ -149,17 +155,33 @@ def main():
         write_output_csv(args.outputfile, predict_dataset, predictions)
 
     elif args.run_option == "evaluate":
+        # List of (model class, name, init kwargs, train kwargs)
         models = [
             (
                 # Our model
                 MatrixFactoriser,
+                "SVD++",
                 {"k": 32, "hw_init_stddev": 0.014676120289293371},
                 {"epochs": 70, "batch_size": 16_384, "lr": 0.0068726720195871754, "user_reg": 0.0676216799448991,
                  "item_reg": 0.06639363622316222, "user_bias_reg": 0.12389941928866091,
                  "item_bias_reg": 0.046243201501061273},
-            ), (
+            ),
+            (
                 # Random model with a normal distribution
-                RandomModel, {"is_normal": True}, {},
+                RandomModel, "RandomNormal Baseline", {"is_normal": True}, {},
+            ),
+            (
+                # Random model with a normal distribution
+                RandomModel, "GlobalAverage Baseline", {"is_normal": False}, {},
+            ),
+            (
+                KNNBenchmark, "KnnBasic Baseline", {"knn_class": "KNNBasic",  "k": 40}, {}
+            ),
+            (
+                KNNBenchmark, "KnnBaseline Baseline", {"knn_class": "KNNBaseline", "k": 40}, {}
+            ),
+            (
+                SVDBenchmark, "SVD Baseline", {}, {}
             )
         ]
 
@@ -170,9 +192,9 @@ def main():
         for cv_num, (train_dataset, test_dataset) in enumerate(
                 to_cross_validation_datasets(train_dataset, n_splits=5, seed=1)):
 
-            for model_cls, init_kwargs, train_kwargs in models:
+            for model_cls, name, init_kwargs, train_kwargs in models:
                 # Run model on CV fold
-                print("Evaluating '%s' on CV fold %d" % (model_cls.__name__, cv_num))
+                print("Evaluating '%s' on CV fold %d" % (name, cv_num))
                 model = model_cls()
                 model.initialise(**init_kwargs)
                 model.train(train_dataset, eval_dataset=eval_dataset, **train_kwargs)
@@ -180,13 +202,13 @@ def main():
                 print("> Results:\n", evaluation)
 
                 # Update results
-                results.append([cv_num, model_cls.__name__, *evaluation.__dict__.values()])
+                results.append([cv_num, name, *evaluation.__dict__.values()])
 
         # Average model results
-        for model_cls, _, _ in models:
-            model_results = [r[2:] for r in results if r[1] == model_cls.__name__]
+        for _, name, _, _ in models:
+            model_results = [r[2:] for r in results if r[1] == name]
             model_mean = np.mean(model_results, axis=0)
-            results.append(["Average", model_cls.__name__, *model_mean])
+            results.append(["Average", name, *model_mean])
 
         # Output a CSV
         cv_df = pd.DataFrame(results, columns=["CV Fold", "Model", *evaluation.__dict__.keys()])
