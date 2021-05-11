@@ -14,6 +14,7 @@ class Evaluation:
     accuracy: float  # Balanced accuracy with rounded predictions
     f1: float  # Weighted f1 score with rounded predictions
     train_time: Optional[float] = 0
+    max_mem_usage: Optional[float] = 0
     # roc_auc: float
 
     def __str__(self):
