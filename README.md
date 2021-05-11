@@ -14,3 +14,7 @@ COMP3208 coursework to create a recommender system
 ## See Results
 
 `tensorboard --logdir=<logdir>`
+
+## Run on Lycium
+
+` sbatch --array=1-5 -p lyceum run-eval.sh`
