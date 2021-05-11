@@ -1,7 +1,11 @@
 import argparse
 import os
+from collections import defaultdict
 
-from models import MatrixFactoriser, RandomModel, KNNBenchmark
+import pandas as pd
+
+from evaluation import to_cross_validation_datasets
+from models import MatrixFactoriser, RandomModel, KNNBenchmark, KNNModel
 from io_handler import read_train_csv, read_test_csv, write_output_csv
 from train import start_training
 
@@ -80,8 +84,19 @@ def main():
 
         # model.save("model.npz")
 
+        elif model_name == 'average':
+            model = RandomModel()
+            model.initialise(is_normal=False)
+
+            print("Starting training")
+            model.train(
+                train_dataset=train_dataset,
+                eval_dataset=test_dataset,
+            )
+
         elif model_name == 'random':
-            model = RandomModel(is_normal=True)
+            model = RandomModel()
+            model.initialise(is_normal=True)
 
             print("Starting training")
             model.train(
@@ -93,6 +108,10 @@ def main():
             print("Training baseline model")
             model = KNNBenchmark()
             model.initialise()
+            model.train(train_dataset)
+        elif model_name == 'custom knn':
+            print("Training KNN model")
+            model = KNNModel()
             model.train(train_dataset)
         else:
             raise RuntimeError("Invalid argument for 'run_model'")
@@ -128,6 +147,50 @@ def main():
 
         print("Writing prediction output")
         write_output_csv(args.outputfile, predict_dataset, predictions)
+
+    elif args.run_option == "evaluate":
+        models = [
+            (
+                # Our model
+                MatrixFactoriser,
+                {"k": 32, "hw_init_stddev": 0.014676120289293371},
+                {"epochs": 70, "batch_size": 16_384, "lr": 0.0068726720195871754, "user_reg": 0.0676216799448991,
+                 "item_reg": 0.06639363622316222, "user_bias_reg": 0.12389941928866091,
+                 "item_bias_reg": 0.046243201501061273},
+            ), (
+                # Random model with a normal distribution
+                RandomModel, {"is_normal": True}, {},
+            ), (
+
+            )
+        ]
+
+        print("Loading dataset")
+        dataset = read_train_csv(args.trainfile, test_size=0., eval_size=0.)
+
+        cv_results = defaultdict(list)
+        for cv_num, (train_dataset, test_dataset) in enumerate(
+                to_cross_validation_datasets(dataset, n_splits=5, seed=1)):
+
+            for model_cls, init_kwargs, train_kwargs in models:
+                # Run model on CV fold
+                print("Evaluating '%s' on CV fold %d" % (model_cls.__name__, cv_num))
+                model = model_cls()
+                model.initialise(**init_kwargs)
+                model.train(train_dataset, **train_kwargs)
+                evaluation = model.eval(test_dataset)
+                print("> Results:\n", evaluation)
+
+                # Update results
+                cv_results["CV fold"].append(cv_num)
+                cv_results["Model"].append(model_cls.__name__)
+                for k, v in evaluation.__dict__.items():
+                    cv_results[k].append(v)
+
+        # Output a CSV
+        cv_df = pd.DataFrame(cv_results)
+        print("Final evaluation results:\n", cv_df.to_markdown())
+        cv_df.to_csv(args.outputfile)
 
 
 if __name__ == "__main__":
