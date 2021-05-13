@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+from memory_profiler import memory_usage
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,7 @@ def main():
     parser.add_argument('--testfile', type=str, help='File containing the test data')
     parser.add_argument('--outputfile', type=str, help='File to output predictions')
     parser.add_argument('--checkpointfile', type=str, help='Checkpoint file to load')
+    parser.add_argument('--evalmodel', type=int, help='Model to evaluate')
     parser.add_argument('--model', type=str,
                         help='Model to use when \'run_option\' is \'run\' (MatrixFact/Random/Baseline)', default=None)
     args = parser.parse_args()
@@ -109,7 +111,7 @@ def main():
         elif model_name == 'knn':
             print("Training baseline model")
             model = KNNBenchmark()
-            model.initialise()
+            model.initialise(knn_class="KNNBasic")
             model.train(train_dataset)
         elif model_name == 'custom knn':
             print("Training KNN model")
@@ -159,15 +161,6 @@ def main():
         # List of (model class, name, init kwargs, train kwargs)
         models = [
             (
-                # Our model
-                MatrixFactoriser,
-                "SVD++",
-                {"k": 32, "hw_init_stddev": 0.014676120289293371},
-                {"epochs": 70, "batch_size": 16_384, "lr": 0.0068726720195871754, "user_reg": 0.0676216799448991,
-                 "item_reg": 0.06639363622316222, "user_bias_reg": 0.12389941928866091,
-                 "item_bias_reg": 0.046243201501061273},
-            ),
-            (
                 # Random model with a normal distribution
                 RandomModel, "RandomNormal Baseline", {"is_normal": True}, {},
             ),
@@ -183,6 +176,15 @@ def main():
             ),
             (
                 SVDBenchmark, "SVD Baseline", {}, {}
+            ),
+            (
+                # Our model
+                MatrixFactoriser,
+                "SVD++",
+                {"k": 32, "hw_init_stddev": 0.014676120289293371},
+                {"epochs": 70, "batch_size": 16_384, "lr": 0.0068726720195871754, "user_reg": 0.0676216799448991,
+                 "item_reg": 0.06639363622316222, "user_bias_reg": 0.12389941928866091,
+                 "item_bias_reg": 0.046243201501061273},
             )
         ]
 
@@ -190,25 +192,28 @@ def main():
         train_dataset = read_train_csv(args.trainfile, test_size=0., eval_size=0.)
 
         results = []
+
+        chosen_models = models if args.evalmodel is None else [models[args.evalmodel]]
+
         for cv_num, (train_dataset, test_dataset) in enumerate(
                 to_cross_validation_datasets(train_dataset, n_splits=5, seed=1)):
 
-            for model_cls, name, init_kwargs, train_kwargs in models:
+            for model_cls, name, init_kwargs, train_kwargs in chosen_models:
                 # Run model on CV fold
                 print("Evaluating '%s' on CV fold %d" % (name, cv_num))
                 model = model_cls()
                 model.initialise(**init_kwargs)
                 start_time = time.time()
-                model.train(train_dataset, **train_kwargs)
+                mem_usage = memory_usage(lambda: model.train(train_dataset, **train_kwargs))
                 end_time = time.time()
-                evaluation = model.eval(test_dataset, train_time=end_time - start_time)
+                evaluation = model.eval(test_dataset, train_time=end_time - start_time, max_mem_usage=max(mem_usage))
                 print("> Results:\n", evaluation)
 
                 # Update results
                 results.append([cv_num, name, *evaluation.__dict__.values()])
 
         # Average model results
-        for _, name, _, _ in models:
+        for _, name, _, _ in chosen_models:
             model_results = [r[2:] for r in results if r[1] == name]
             model_mean = np.mean(model_results, axis=0)
             results.append(["Average", name, *model_mean])

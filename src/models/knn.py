@@ -5,7 +5,7 @@ import numpy as np
 from data import EvaluationDataset
 from models import ModelBase
 from progress_bars import EpochBar
-from src.data import TestDataset, TrainDataset
+from data import TestDataset, TrainDataset
 
 
 class KNNModel(ModelBase):

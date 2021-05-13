@@ -14,6 +14,11 @@ class Evaluation:
     accuracy: float  # Balanced accuracy with rounded predictions
     f1: float  # Weighted f1 score with rounded predictions
     train_time: Optional[float] = 0
+<<<<<<< HEAD
+=======
+    max_mem_usage: Optional[float] = 0
+    # roc_auc: float
+>>>>>>> d7b19130e1bd21d07f28202a26e56e95012d8750
 
     def __str__(self):
         return "> " + "\n> ".join(f"{k}: {v}" for k, v in self.__dict__.items())
