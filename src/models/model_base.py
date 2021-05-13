@@ -82,5 +82,4 @@ class ModelBase(ABC):
             accuracy=metrics.balanced_accuracy_score(y_true_labels, y_preds_labels),
             f1=metrics.f1_score(y_true_labels, y_preds_labels, average="weighted"),
             **kwargs
-            # roc_auc=metrics.roc_auc_score(y_true_labels, y_preds_labels, average="weighted", multi_class="ovo")
         )
